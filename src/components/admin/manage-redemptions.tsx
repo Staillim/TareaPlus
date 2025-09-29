@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
-import { collection, onSnapshot, doc, updateDoc, getDocs } from "firebase/firestore";
+import { collection, onSnapshot, doc, updateDoc, getDocs, writeBatch, increment } from "firebase/firestore";
 import { firestore } from "@/lib/firebase/firebase";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -94,16 +94,32 @@ export function ManageRedemptions() {
         }
 
         try {
+            const batch = writeBatch(firestore);
+            
             const redemptionRef = doc(firestore, "users", item.userId, "redemptions", item.id);
-            await updateDoc(redemptionRef, {
+            batch.update(redemptionRef, {
                 status: newStatus,
                 code: newStatus === 'approved' ? code : null,
             });
 
+            if (newStatus === 'rejected') {
+                const userRef = doc(firestore, "users", item.userId);
+                batch.update(userRef, {
+                    points: increment(item.pointsUsed)
+                });
+            }
+
+            await batch.commit();
+
             // Optimistically update local state
             setRedemptions(prev => prev.map(r => r.id === item.id ? {...r, status: newStatus, code: newStatus === 'approved' ? code : null} : r));
 
-            toast({ title: 'Estado Actualizado', description: `El canje ha sido marcado como ${statusConfig[newStatus].label.toLowerCase()}.` });
+            if (newStatus === 'rejected') {
+                toast({ title: 'Canje Rechazado', description: `Se han devuelto ${item.pointsUsed.toLocaleString()} puntos al usuario.` });
+            } else {
+                toast({ title: 'Estado Actualizado', description: `El canje ha sido marcado como ${statusConfig[newStatus].label.toLowerCase()}.` });
+            }
+            
             setCode(""); 
         } catch (error) {
             console.error("Error updating status: ", error);
@@ -175,18 +191,21 @@ export function ManageRedemptions() {
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                                 <AlertDialogHeader>
-                                <AlertDialogTitle>Aprobar Canje</AlertDialogTitle>
+                                <AlertDialogTitle>Revisar Canje</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                    Introduce el código de la tarjeta para {item.rewardName} para el usuario {item.userEmail}. Esta acción es irreversible.
+                                    Aprueba o rechaza la solicitud para {item.rewardName} del usuario {item.userEmail}. Al aprobar, introduce el código. Al rechazar, los puntos se devolverán al usuario.
                                 </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <div className="space-y-2">
-                                    <Label htmlFor="card-code">Código de la Tarjeta</Label>
+                                    <Label htmlFor="card-code">Código de la Tarjeta (si se aprueba)</Label>
                                     <Input id="card-code" onChange={(e) => setCode(e.target.value)} placeholder="Ej: ABCD-1234-EFGH" />
                                 </div>
                                 <AlertDialogFooter>
                                 <AlertDialogCancel onClick={() => setCode("")}>Cancelar</AlertDialogCancel>
-                                 <Button variant="destructive" onClick={() => handleUpdateStatus(item, 'rejected')} disabled={isPending}>Rechazar</Button>
+                                 <Button variant="destructive" onClick={() => handleUpdateStatus(item, 'rejected')} disabled={isPending}>
+                                     {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                     Rechazar
+                                </Button>
                                 <AlertDialogAction onClick={() => handleUpdateStatus(item, 'approved')} disabled={isPending || !code}>
                                     {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                     Aprobar
