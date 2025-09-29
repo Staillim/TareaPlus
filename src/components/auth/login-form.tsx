@@ -8,6 +8,7 @@ import { auth } from "@/lib/firebase/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { useTransition } from 'react';
 import { Loader2 } from "lucide-react";
+import { useRouter } from 'next/navigation';
 
 import { Button } from "@/components/ui/button";
 import {
@@ -38,6 +39,7 @@ type LoginFormProps = {
 export function LoginForm({ onShowForgotPassword }: LoginFormProps) {
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
+  const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -55,7 +57,7 @@ export function LoginForm({ onShowForgotPassword }: LoginFormProps) {
           title: "Inicio de sesión exitoso",
           description: "¡Bienvenido de nuevo!",
         });
-        // Here you would typically redirect the user to a protected route
+        router.push('/dashboard');
       } catch (error: any) {
         let message = "Ocurrió un error inesperado.";
         if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {

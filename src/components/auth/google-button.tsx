@@ -1,9 +1,11 @@
 "use client";
 
-import { signInWithPopup } from "firebase/auth";
-import { auth, googleProvider } from "@/lib/firebase/firebase";
+import { signInWithPopup, getAdditionalUserInfo } from "firebase/auth";
+import { auth, googleProvider, firestore } from "@/lib/firebase/firebase";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg
@@ -19,15 +21,34 @@ const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 export function GoogleButton() {
   const { toast } = useToast();
+  const router = useRouter();
 
   const handleGoogleSignIn = async () => {
     try {
-      await signInWithPopup(auth, googleProvider);
-      toast({
-        title: "Éxito",
-        description: "Has iniciado sesión con Google.",
-      });
-      // Here you would typically redirect the user to a protected route
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      const additionalInfo = getAdditionalUserInfo(result);
+
+      if (additionalInfo?.isNewUser) {
+        await setDoc(doc(firestore, "users", user.uid), {
+            uid: user.uid,
+            email: user.email,
+            username: user.displayName || user.email?.split('@')[0],
+            createdAt: new Date(),
+            role: 'user',
+          });
+        toast({
+          title: "¡Cuenta creada con Google!",
+          description: "Hemos creado tu cuenta exitosamente.",
+        });
+      } else {
+         toast({
+            title: "Éxito",
+            description: "Has iniciado sesión con Google.",
+          });
+      }
+      
+      router.push('/dashboard');
     } catch (error: any) {
       toast({
         variant: "destructive",

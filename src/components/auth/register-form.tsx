@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useTransition } from "react";
 import { Loader2 } from "lucide-react";
 import { doc, setDoc } from "firebase/firestore";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -44,6 +45,7 @@ const formSchema = z
 export function RegisterForm() {
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
+  const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -74,7 +76,7 @@ export function RegisterForm() {
           title: "¡Cuenta creada!",
           description: "Hemos creado tu cuenta exitosamente.",
         });
-         // Here you would typically redirect the user or update the UI
+         router.push('/dashboard');
       } catch (error: any) {
         let message = "Ocurrió un error inesperado.";
         if (error.code === 'auth/email-already-in-use') {
