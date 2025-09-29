@@ -1,58 +1,49 @@
-rules_version = '2';
 
+rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check for admin role
     function isAdmin() {
-      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     match /users/{userId} {
-      // Admins can read/write any user document
-      allow read, write: if isAdmin();
+      // An authenticated user can access their own document
+      // An admin can access any user document
+      allow read, write: if (request.auth != null && request.auth.uid == userId) || isAdmin();
       
-      // Users can only read/update their own document
-      allow get, update: if request.auth.uid == userId;
+      // A new user can create their own document
+      allow create: if request.auth != null;
 
-      // Unauthenticated users can read the referralCode for validation
-      // This is safe because we only allow reading one field.
-      // This is a workaround since Firestore rules don't allow querying a subset of fields.
-      // A more secure way would be a Cloud Function, but this is acceptable for this use case.
-      allow list: if request.auth == null;
-    }
+      // Allow anonymous reads only for referral code validation on documents that have that field.
+      allow get: if request.auth == null && "referralCode" in resource.data;
 
-    match /users/{userId}/completedTasksHistory/{historyId} {
-        // Admins can read history
-        allow read: if isAdmin();
-        // Users can create their own history
-        allow create: if request.auth.uid == userId;
+      match /completedTasksHistory/{historyId} {
+        allow create: if request.auth != null && request.auth.uid == userId;
+      }
     }
 
     match /tasks/{taskId} {
-      // Admins can manage tasks
-      allow read, write, create, delete: if isAdmin();
-      // Authenticated users can read tasks
-      allow get, list: if request.auth != null;
-      // Allow users to update completions count
-      allow update: if request.auth != null && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['completions']);
+      // Logged-in users can read tasks
+      allow read: if request.auth != null;
+      // Admins can write tasks
+      allow write: if isAdmin();
     }
 
     match /rewards/{rewardId} {
-        // Admins can manage rewards
-        allow read, write, create, delete: if isAdmin();
-        // Authenticated users can read rewards
-        allow get, list: if request.auth != null;
+      // Logged-in users can read rewards
+      allow read: if request.auth != null;
+      // Admins can write rewards
+      allow write: if isAdmin();
     }
-
+    
     match /referrals/{referralId} {
-        // Admins can read all referral documents
-        allow read: if isAdmin();
-        // Allow creating a referral document if authenticated
-        allow create: if request.auth != null;
-        // Allow users to read referrals where they are the referrer
-        allow list: if request.auth.uid == resource.data.referrerId;
+      // A user can read their own referrals (where they are the referrer)
+      allow read: if request.auth != null && resource.data.referrerId == request.auth.uid;
+      // An admin can read all referrals
+      allow read: if isAdmin();
+      // Allow creation of a referral record
+      allow create: if request.auth != null;
     }
   }
 }
