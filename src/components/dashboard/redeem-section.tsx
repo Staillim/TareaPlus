@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -78,16 +79,12 @@ export function RedeemSection({ userPoints }: RedeemSectionProps) {
           <h2 className="text-2xl font-bold font-headline text-center bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">Canjear Recompensas</h2>
           <div className="grid grid-cols-2 gap-6">
             {[...Array(4)].map((_, i) => (
-                <Card key={i} className="bg-card/80 backdrop-blur-sm flex flex-col">
+                <Card key={i} className="bg-card/80 backdrop-blur-sm flex flex-col aspect-[3/4]">
                     <CardContent className="p-4 flex-grow flex flex-col items-center justify-center space-y-2">
-                        <div className="h-24 w-full bg-muted/50 rounded-lg animate-pulse" />
-                        <div className="h-5 w-24 bg-muted/50 rounded animate-pulse" />
-                        <div className="h-4 w-16 bg-muted/50 rounded animate-pulse" />
+                        <div className="h-full w-full bg-muted/50 rounded-lg animate-pulse" />
                     </CardContent>
                     <CardFooter className="p-2 border-t border-border/20">
-                        <Button className="w-full" disabled>
-                            <div className="h-5 w-20 bg-muted/50 rounded animate-pulse" />
-                        </Button>
+                        <div className="h-9 w-full bg-muted/50 rounded animate-pulse" />
                     </CardFooter>
                 </Card>
             ))}
@@ -103,20 +100,23 @@ export function RedeemSection({ userPoints }: RedeemSectionProps) {
         {rewards.map((card) => {
           const canAfford = userPoints >= card.points;
           return (
-            <Card key={card.id} className={cn("animated-card from-gradient-2-start to-gradient-2-end flex flex-col", !canAfford && "opacity-50 grayscale")}>
-               <div className="particles-container">
+            <Card key={card.id} className={cn("animated-card flex flex-col aspect-[3/4] p-0 overflow-hidden", !canAfford && "opacity-50 grayscale")}>
+              <div className="particles-container">
                 {[...Array(15)].map((_, i) => <div key={i} className="particle"></div>)}
               </div>
-              <CardContent className="p-4 flex-grow flex flex-col items-center justify-between text-center">
-                <div className="relative w-full h-24 mb-4">
-                  <Image src={getGoogleDriveImageUrl(card.logoUrl)} alt={`${card.name} logo`} layout="fill" className="object-contain drop-shadow-lg" />
-                </div>
-                <div className='text-center'>
-                  <p className="font-bold text-lg text-white">{card.name}</p>
-                  {card.value && <p className="text-sm text-white/80">{card.value}</p>}
+              <CardContent className="p-0 flex-grow relative w-full h-full">
+                <Image 
+                    src={getGoogleDriveImageUrl(card.logoUrl)} 
+                    alt={`${card.name} logo`} 
+                    layout="fill" 
+                    className="object-cover"
+                />
+                <div className="absolute bottom-0 left-0 right-0 p-2 bg-black/50 backdrop-blur-sm">
+                    <p className="font-bold text-base text-white truncate">{card.name}</p>
+                    {card.value && <p className="text-xs text-white/80">{card.value}</p>}
                 </div>
               </CardContent>
-              <CardFooter className="p-2 mt-auto border-t border-white/10">
+              <CardFooter className="p-2 mt-auto border-t border-white/10 z-10">
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
                         <Button className="w-full bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm shadow-lg transition-all duration-300 transform hover:scale-105 disabled:bg-white/10" disabled={!canAfford}>
