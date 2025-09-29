@@ -12,13 +12,13 @@ import { RedeemSection } from "@/components/dashboard/redeem-section";
 import { BottomNav } from "@/components/dashboard/bottom-nav";
 import { Home, Gift, Users, LogOut } from "lucide-react";
 import { Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 type UserData = {
   username: string;
   points: number;
   referrals: number;
   referralCode: string;
+  role: 'user' | 'admin';
 };
 
 export default function DashboardPage() {
@@ -35,19 +35,27 @@ export default function DashboardPage() {
         const userDoc = await getDoc(userDocRef);
         if (userDoc.exists()) {
           const data = userDoc.data();
+          
+          if (data.role === 'admin') {
+            router.push('/admin/dashboard');
+            return;
+          }
+
           setUserData({
             username: data.username || "Usuario",
             points: data.points || 1250,
             referrals: data.referrals || 5,
             referralCode: data.referralCode || "AB-12345",
+            role: data.role || 'user',
           });
         } else {
-           // Fallback mock data
+           // Fallback mock data for user
            setUserData({
             username: "Usuario",
             points: 1250,
             referrals: 5,
             referralCode: "AB-12345",
+            role: 'user',
           });
         }
       } else {
