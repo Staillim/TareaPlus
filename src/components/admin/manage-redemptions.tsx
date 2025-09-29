@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
-import { collectionGroup, onSnapshot, doc, updateDoc, query, orderBy } from "firebase/firestore";
+import { collection, onSnapshot, doc, updateDoc, getDocs } from "firebase/firestore";
 import { firestore } from "@/lib/firebase/firebase";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -54,18 +54,36 @@ export function ManageRedemptions() {
   const { toast } = useToast();
 
   useEffect(() => {
-    const q = query(collectionGroup(firestore, "redemptions"), orderBy("requestedAt", "desc"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Redemption));
-        setRedemptions(data);
-        setLoading(false);
-    }, (error) => {
-        console.error("Error fetching redemptions: ", error);
-        toast({ variant: 'destructive', title: 'Error', description: 'No se pudieron cargar los canjes.' });
-        setLoading(false);
-    });
+    setLoading(true);
+    const fetchAllRedemptions = async () => {
+        try {
+            const usersSnapshot = await getDocs(collection(firestore, "users"));
+            const allRedemptions: Redemption[] = [];
+            
+            for (const userDoc of usersSnapshot.docs) {
+                const redemptionsSnapshot = await getDocs(collection(firestore, `users/${userDoc.id}/redemptions`));
+                redemptionsSnapshot.forEach(redemptionDoc => {
+                    allRedemptions.push({ id: redemptionDoc.id, ...redemptionDoc.data() } as Redemption);
+                });
+            }
+            
+            // Sort by date descending
+            allRedemptions.sort((a, b) => b.requestedAt.toDate() - a.requestedAt.toDate());
 
-    return () => unsubscribe();
+            setRedemptions(allRedemptions);
+        } catch (error) {
+            console.error("Error fetching redemptions: ", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'No se pudieron cargar los canjes.' });
+        } finally {
+            setLoading(false);
+        }
+    };
+    
+    fetchAllRedemptions();
+    
+    // Note: This component will not update in real-time to avoid complex listener management.
+    // It fetches data once on component mount. A pull-to-refresh or a manual refresh button would be a good addition.
+
   }, [toast]);
 
   const handleUpdateStatus = (item: Redemption, newStatus: 'approved' | 'rejected') => {
@@ -81,8 +99,12 @@ export function ManageRedemptions() {
                 status: newStatus,
                 code: newStatus === 'approved' ? code : null,
             });
+
+            // Optimistically update local state
+            setRedemptions(prev => prev.map(r => r.id === item.id ? {...r, status: newStatus, code: newStatus === 'approved' ? code : null} : r));
+
             toast({ title: 'Estado Actualizado', description: `El canje ha sido marcado como ${statusConfig[newStatus].label.toLowerCase()}.` });
-            setCode(""); // Reset code input
+            setCode(""); 
         } catch (error) {
             console.error("Error updating status: ", error);
             toast({ variant: 'destructive', title: 'Error', description: 'No se pudo actualizar el estado del canje.' });
@@ -160,12 +182,12 @@ export function ManageRedemptions() {
                                 </AlertDialogHeader>
                                 <div className="space-y-2">
                                     <Label htmlFor="card-code">Código de la Tarjeta</Label>
-                                    <Input id="card-code" value={code} onChange={(e) => setCode(e.target.value)} placeholder="Ej: ABCD-1234-EFGH" />
+                                    <Input id="card-code" onChange={(e) => setCode(e.target.value)} placeholder="Ej: ABCD-1234-EFGH" />
                                 </div>
                                 <AlertDialogFooter>
                                 <AlertDialogCancel onClick={() => setCode("")}>Cancelar</AlertDialogCancel>
                                  <Button variant="destructive" onClick={() => handleUpdateStatus(item, 'rejected')} disabled={isPending}>Rechazar</Button>
-                                <AlertDialogAction onClick={() => handleUpdateStatus(item, 'approved')} disabled={isPending}>
+                                <AlertDialogAction onClick={() => handleUpdateStatus(item, 'approved')} disabled={isPending || !code}>
                                     {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                     Aprobar
                                 </AlertDialogAction>
