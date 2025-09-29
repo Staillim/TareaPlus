@@ -68,7 +68,7 @@ export function StatsCards() {
   if (loading) {
       return (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            {[...Array(4)].map(i => (
+            {[...Array(4)].map((_, i) => (
                 <Card key={i} className="animated-card from-gray-700 to-gray-800">
                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <div className="h-4 w-2/3 bg-muted/50 animate-pulse rounded"></div>
