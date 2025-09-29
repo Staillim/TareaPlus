@@ -1,8 +1,11 @@
 
 "use client";
 
+import { useState, useEffect } from "react";
+import { collection, onSnapshot } from "firebase/firestore";
+import { firestore } from "@/lib/firebase/firebase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Award, ListChecks, DollarSign } from "lucide-react";
+import { Users, Award, ListChecks, DollarSign, Loader2 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const dailyActivityData = [
@@ -16,13 +19,43 @@ const dailyActivityData = [
 ];
 
 export function StatsCards() {
-  // Mock data
-  const stats = {
-    totalUsers: 1253,
-    pointsDistributed: 578200,
-    activeTasks: 24,
-    totalRedeemed: 4500
-  };
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    pointsDistributed: 0,
+    activeTasks: 0,
+    totalRedeemed: 0
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const usersUnsubscribe = onSnapshot(collection(firestore, 'users'), (snapshot) => {
+        setStats(prevStats => ({ ...prevStats, totalUsers: snapshot.size }));
+        setLoading(false);
+    });
+
+    const tasksUnsubscribe = onSnapshot(collection(firestore, 'tasks'), (snapshot) => {
+        const activeTasks = snapshot.docs.filter(doc => doc.data().status === 'active').length;
+        setStats(prevStats => ({ ...prevStats, activeTasks: activeTasks }));
+        setLoading(false);
+    });
+    
+    // TODO: Implement logic for pointsDistributed and totalRedeemed
+
+    return () => {
+        usersUnsubscribe();
+        tasksUnsubscribe();
+    }
+  }, [])
+
+
+  if (loading) {
+      return (
+        <div className="flex min-h-[400px] w-full items-center justify-center">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        </div>
+      )
+  }
+
 
   return (
     <section className="space-y-6">
@@ -35,7 +68,6 @@ export function StatsCards() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalUsers.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">+20.1% desde el mes pasado</p>
           </CardContent>
         </Card>
         <Card>
@@ -45,7 +77,6 @@ export function StatsCards() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.pointsDistributed.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">+180.1% desde el mes pasado</p>
           </CardContent>
         </Card>
         <Card>
@@ -55,7 +86,6 @@ export function StatsCards() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.activeTasks}</div>
-            <p className="text-xs text-muted-foreground">+5 desde ayer</p>
           </CardContent>
         </Card>
         <Card>
@@ -65,7 +95,6 @@ export function StatsCards() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">${stats.totalRedeemed.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">+19% desde el mes pasado</p>
           </CardContent>
         </Card>
       </div>
