@@ -1,12 +1,12 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
-import { collection, getDocs, doc, updateDoc, arrayUnion, increment } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, arrayUnion, increment, writeBatch, serverTimestamp } from "firebase/firestore";
 import { firestore } from "@/lib/firebase/firebase";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Globe, Instagram, Link2, Youtube, Check, Loader2 } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 
 const iconMap: { [key: string]: React.ElementType } = {
@@ -42,7 +42,7 @@ export function TasksSection({ userId, completedTasks }: TasksSectionProps) {
         const tasksCollection = collection(firestore, "tasks");
         const tasksSnapshot = await getDocs(tasksCollection);
         const tasksList = tasksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task));
-        setTasks(tasksList);
+        setTasks(tasksList.filter(task => task.status === 'active'));
       } catch (error) {
         console.error("Error fetching tasks:", error);
         toast({ variant: "destructive", title: "Error", description: "No se pudieron cargar las tareas." });
@@ -56,30 +56,52 @@ export function TasksSection({ userId, completedTasks }: TasksSectionProps) {
   const handleCompleteTask = async (task: Task) => {
     setCompleting(task.id);
     try {
-        // Simulate task completion
-        await new Promise(resolve => setTimeout(resolve, 1500));
+      // Open URL before showing toast
+      if (task.type === 'visit' || task.type === 'video' || task.type === 'shortener' || task.type === 'follow') {
+        openTaskUrl(task.url);
+      }
 
-        const userRef = doc(firestore, 'users', userId);
-        
-        await updateDoc(userRef, {
-            completedTasks: arrayUnion(task.id),
-            points: increment(task.points)
-        });
+      // Simulate task verification delay
+      await new Promise(resolve => setTimeout(resolve, task.duration ? task.duration * 1000 : 2000));
 
-        toast({
-            title: "¡Tarea Completada!",
-            description: `Has ganado ${task.points} puntos.`,
-        });
+      const batch = writeBatch(firestore);
+
+      // 1. Update user document
+      const userRef = doc(firestore, 'users', userId);
+      batch.update(userRef, {
+        completedTasks: arrayUnion(task.id),
+        points: increment(task.points)
+      });
+
+      // 2. Update task document
+      const taskRef = doc(firestore, 'tasks', task.id);
+      batch.update(taskRef, {
+        completions: increment(1)
+      });
+      
+      // 3. Add to user's completed tasks history
+      const historyRef = doc(collection(userRef, 'completedTasksHistory'));
+      batch.set(historyRef, {
+          taskId: task.id,
+          completedAt: serverTimestamp()
+      });
+
+      await batch.commit();
+
+      toast({
+        title: "¡Tarea Completada!",
+        description: `Has ganado ${task.points} puntos.`,
+      });
 
     } catch (error) {
-        console.error("Error completing task: ", error);
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: "No se pudo completar la tarea. Inténtalo de nuevo.",
-        });
+      console.error("Error completing task: ", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No se pudo completar la tarea. Inténtalo de nuevo.",
+      });
     } finally {
-        setCompleting(null);
+      setCompleting(null);
     }
   }
 
@@ -104,7 +126,7 @@ export function TasksSection({ userId, completedTasks }: TasksSectionProps) {
       </div>
     );
   }
-  
+
   return (
     <section className="space-y-4 animate-in fade-in-0 zoom-in-95">
       <h2 className="text-xl font-bold font-headline">Tareas Disponibles</h2>
@@ -126,19 +148,14 @@ export function TasksSection({ userId, completedTasks }: TasksSectionProps) {
                     <p className="text-sm text-primary">{task.points} Puntos</p>
                   </div>
                 </div>
-                <Button 
-                  size="sm" 
-                  onClick={() => {
-                      if(task.type === 'visit' || task.type === 'video' || task.type === 'shortener' || task.type === 'follow') {
-                          openTaskUrl(task.url);
-                      }
-                      handleCompleteTask(task);
-                  }}
+                <Button
+                  size="sm"
+                  onClick={() => handleCompleteTask(task)}
                   disabled={isCompleted || isCompleting}
                 >
                   {isCompleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   {isCompleted && <Check className="mr-2 h-4 w-4" />}
-                  {isCompleting ? 'Completando...' : isCompleted ? 'Completada' : 'Completar'}
+                  {isCompleting ? 'Verificando...' : isCompleted ? 'Completada' : 'Completar'}
                 </Button>
               </CardContent>
             </Card>
