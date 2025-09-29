@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
-import { collection, onSnapshot, doc, updateDoc, query, orderBy } from "firebase/firestore";
+import { collectionGroup, onSnapshot, doc, updateDoc, query, orderBy } from "firebase/firestore";
 import { firestore } from "@/lib/firebase/firebase";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -54,7 +54,7 @@ export function ManageRedemptions() {
   const { toast } = useToast();
 
   useEffect(() => {
-    const q = query(collection(firestore, "redemptions"), orderBy("requestedAt", "desc"));
+    const q = query(collectionGroup(firestore, "redemptions"), orderBy("requestedAt", "desc"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
         const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Redemption));
         setRedemptions(data);
@@ -68,7 +68,7 @@ export function ManageRedemptions() {
     return () => unsubscribe();
   }, [toast]);
 
-  const handleUpdateStatus = (id: string, newStatus: 'approved' | 'rejected') => {
+  const handleUpdateStatus = (item: Redemption, newStatus: 'approved' | 'rejected') => {
     startTransition(async () => {
         if (newStatus === 'approved' && !code) {
             toast({ variant: 'destructive', title: 'Error', description: 'Debes introducir un código para aprobar el canje.' });
@@ -76,7 +76,7 @@ export function ManageRedemptions() {
         }
 
         try {
-            const redemptionRef = doc(firestore, "redemptions", id);
+            const redemptionRef = doc(firestore, "users", item.userId, "redemptions", item.id);
             await updateDoc(redemptionRef, {
                 status: newStatus,
                 code: newStatus === 'approved' ? code : null,
@@ -164,8 +164,8 @@ export function ManageRedemptions() {
                                 </div>
                                 <AlertDialogFooter>
                                 <AlertDialogCancel onClick={() => setCode("")}>Cancelar</AlertDialogCancel>
-                                 <Button variant="destructive" onClick={() => handleUpdateStatus(item.id, 'rejected')} disabled={isPending}>Rechazar</Button>
-                                <AlertDialogAction onClick={() => handleUpdateStatus(item.id, 'approved')} disabled={isPending}>
+                                 <Button variant="destructive" onClick={() => handleUpdateStatus(item, 'rejected')} disabled={isPending}>Rechazar</Button>
+                                <AlertDialogAction onClick={() => handleUpdateStatus(item, 'approved')} disabled={isPending}>
                                     {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                     Aprobar
                                 </AlertDialogAction>
@@ -193,5 +193,3 @@ export function ManageRedemptions() {
     </Card>
   );
 }
-
-    

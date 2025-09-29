@@ -1,50 +1,44 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isAuth() {
-      return request.auth != null;
-    }
-    
     function isAdmin() {
-      return request.auth.token.role == 'admin';
-    }
-
-    function isOwner(userId) {
-      return request.auth.uid == userId;
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     match /users/{userId} {
       allow read, write: if isAdmin();
-      allow create: if isOwner(userId);
-      allow get, update, list: if isOwner(userId);
+      allow create: if request.auth.uid == userId;
+      allow get, update: if request.auth.uid == userId;
       
       match /completedTasksHistory/{historyId} {
-        allow read, write: if isOwner(userId) || isAdmin();
+        allow read, write: if request.auth.uid == userId || isAdmin();
+      }
+
+      match /redemptions/{redemptionId} {
+        allow read, create, update: if request.auth.uid == userId;
+        allow list: if request.auth.uid == userId;
       }
     }
 
     match /tasks/{taskId} {
       allow read, write: if isAdmin();
-      allow list, get: if isAuth();
+      allow get, list: if request.auth != null;
     }
 
     match /rewards/{rewardId} {
-      allow read, write: if isAdmin();
-      allow list, get: if isAuth();
+       allow read, write: if isAdmin();
+       allow get, list: if request.auth != null;
     }
 
     match /referrals/{referralId} {
-      allow read: if isAuth() && resource.data.referrerId == request.auth.uid;
-      allow create: if isAuth();
+      allow read: if request.auth != null && resource.data.referrerId == request.auth.uid;
+      allow create: if request.auth != null;
     }
-
-    match /redemptions/{redemptionId} {
-      allow create: if isAuth();
-      allow list: if isAuth() && request.query.where.size() == 1 && request.query.where[0].field == 'userId' && request.query.where[0].value == request.auth.uid;
-      allow read, update: if isAdmin() || (isAuth() && resource.data.userId == request.auth.uid);
+    
+    match /{path=**}/redemptions/{redemptionId} {
+      allow read, write: if isAdmin();
     }
   }
 }

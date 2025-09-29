@@ -98,8 +98,9 @@ export function RedeemSection({ userPoints }: RedeemSectionProps) {
             points: increment(-card.points)
         });
 
-        // 2. Create redemption record
-        await addDoc(collection(firestore, "redemptions"), {
+        // 2. Create redemption record in subcollection
+        const redemptionRef = collection(firestore, "users", currentUser.uid, "redemptions");
+        await addDoc(redemptionRef, {
             userId: currentUser.uid,
             userEmail: currentUser.email,
             rewardId: card.id,
@@ -203,5 +204,3 @@ export function RedeemSection({ userPoints }: RedeemSectionProps) {
     </section>
   );
 }
-
-    

@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
+import { collection, query, onSnapshot, orderBy } from "firebase/firestore";
 import { firestore } from "@/lib/firebase/firebase";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Loader2, Clock, CheckCircle, XCircle, Copy } from "lucide-react";
@@ -40,8 +40,7 @@ export function MyRedemptionsSection({ userId }: { userId: string }) {
         if (!userId) return;
 
         const q = query(
-            collection(firestore, 'redemptions'), 
-            where('userId', '==', userId),
+            collection(firestore, 'users', userId, 'redemptions'), 
             orderBy('requestedAt', 'desc')
         );
         
@@ -124,5 +123,3 @@ export function MyRedemptionsSection({ userId }: { userId: string }) {
         </section>
     );
 }
-
-    
