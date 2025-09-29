@@ -22,7 +22,7 @@ export function Header({ username, points, onLogout }: HeaderProps) {
           <h1 className="text-lg font-bold font-headline">{username}</h1>
           <div className="flex items-center gap-1 text-sm text-primary">
             <Award className="h-4 w-4" />
-            <span>{points.toLocaleString()} Puntos</span>
+            <span>{(points || 0).toLocaleString()} Puntos</span>
           </div>
         </div>
       </div>
