@@ -1,6 +1,9 @@
 "use client";
 
+import { signInWithPopup } from "firebase/auth";
+import { auth, googleProvider } from "@/lib/firebase/firebase";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg
@@ -15,10 +18,23 @@ const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
   );
 
 export function GoogleButton() {
-  const handleGoogleSignIn = () => {
-    // This is where you would handle Google Sign-In logic
-    console.log("Google Sign-In clicked");
-    // Implement Google Sign-In API call here
+  const { toast } = useToast();
+
+  const handleGoogleSignIn = async () => {
+    try {
+      await signInWithPopup(auth, googleProvider);
+      toast({
+        title: "Éxito",
+        description: "Has iniciado sesión con Google.",
+      });
+      // Here you would typically redirect the user to a protected route
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error de inicio de sesión",
+        description: error.message,
+      });
+    }
   };
 
   return (

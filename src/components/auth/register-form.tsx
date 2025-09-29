@@ -3,6 +3,11 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { auth } from "@/lib/firebase/firebase";
+import { useToast } from "@/hooks/use-toast";
+import { useTransition } from "react";
+import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -33,6 +38,9 @@ const formSchema = z
   });
 
 export function RegisterForm() {
+  const [isPending, startTransition] = useTransition();
+  const { toast } = useToast();
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -43,9 +51,26 @@ export function RegisterForm() {
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    // This is where you would handle registration logic
-    console.log(values);
-    // Implement registration API call here
+    startTransition(async () => {
+      try {
+        await createUserWithEmailAndPassword(auth, values.email, values.password);
+        toast({
+          title: "¡Cuenta creada!",
+          description: "Hemos creado tu cuenta exitosamente.",
+        });
+         // Here you would typically redirect the user or update the UI
+      } catch (error: any) {
+        let message = "Ocurrió un error inesperado.";
+        if (error.code === 'auth/email-already-in-use') {
+          message = "Este correo electrónico ya está en uso.";
+        }
+        toast({
+          variant: "destructive",
+          title: "Error de registro",
+          description: message,
+        });
+      }
+    });
   }
 
   return (
@@ -59,7 +84,7 @@ export function RegisterForm() {
               <FormItem>
                 <FormLabel>Correo Electrónico</FormLabel>
                 <FormControl>
-                  <Input placeholder="tu@email.com" {...field} />
+                  <Input placeholder="tu@email.com" {...field} disabled={isPending} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -72,7 +97,7 @@ export function RegisterForm() {
               <FormItem>
                 <FormLabel>Contraseña</FormLabel>
                 <FormControl>
-                  <Input type="password" placeholder="••••••••" {...field} />
+                  <Input type="password" placeholder="••••••••" {...field} disabled={isPending}/>
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -85,13 +110,14 @@ export function RegisterForm() {
               <FormItem>
                 <FormLabel>Confirmar Contraseña</FormLabel>
                 <FormControl>
-                  <Input type="password" placeholder="••••••••" {...field} />
+                  <Input type="password" placeholder="••••••••" {...field} disabled={isPending}/>
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
-          <Button type="submit" className="w-full">
+          <Button type="submit" className="w-full" disabled={isPending}>
+            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Crear Cuenta
           </Button>
         </form>

@@ -3,6 +3,11 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "@/lib/firebase/firebase";
+import { useToast } from "@/hooks/use-toast";
+import { useTransition } from 'react';
+import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +36,9 @@ type LoginFormProps = {
 };
 
 export function LoginForm({ onShowForgotPassword }: LoginFormProps) {
+  const [isPending, startTransition] = useTransition();
+  const { toast } = useToast();
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -40,9 +48,26 @@ export function LoginForm({ onShowForgotPassword }: LoginFormProps) {
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    // This is where you would handle login logic
-    console.log(values);
-    // Implement login API call here
+    startTransition(async () => {
+      try {
+        await signInWithEmailAndPassword(auth, values.email, values.password);
+        toast({
+          title: "Inicio de sesión exitoso",
+          description: "¡Bienvenido de nuevo!",
+        });
+        // Here you would typically redirect the user to a protected route
+      } catch (error: any) {
+        let message = "Ocurrió un error inesperado.";
+        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+            message = "Correo electrónico o contraseña incorrectos.";
+        }
+        toast({
+          variant: "destructive",
+          title: "Error de inicio de sesión",
+          description: message,
+        });
+      }
+    });
   }
 
   return (
@@ -56,7 +81,7 @@ export function LoginForm({ onShowForgotPassword }: LoginFormProps) {
               <FormItem>
                 <FormLabel>Correo Electrónico</FormLabel>
                 <FormControl>
-                  <Input placeholder="tu@email.com" {...field} />
+                  <Input placeholder="tu@email.com" {...field} disabled={isPending} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -69,7 +94,7 @@ export function LoginForm({ onShowForgotPassword }: LoginFormProps) {
               <FormItem>
                 <FormLabel>Contraseña</FormLabel>
                 <FormControl>
-                  <Input type="password" placeholder="••••••••" {...field} />
+                  <Input type="password" placeholder="••••••••" {...field} disabled={isPending}/>
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -81,11 +106,13 @@ export function LoginForm({ onShowForgotPassword }: LoginFormProps) {
               variant="link"
               className="p-0 h-auto text-primary"
               onClick={onShowForgotPassword}
+              disabled={isPending}
             >
               ¿Olvidaste tu contraseña?
             </Button>
           </div>
-          <Button type="submit" className="w-full">
+          <Button type="submit" className="w-full" disabled={isPending}>
+             {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Iniciar Sesión
           </Button>
         </form>
