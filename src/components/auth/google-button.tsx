@@ -55,6 +55,24 @@ export function GoogleButton() {
       const batch = writeBatch(firestore);
 
       if (additionalInfo?.isNewUser) {
+        const refCode = searchParams.get('ref');
+        let usedReferralCode: string | undefined = undefined;
+        let referrerId: string | null = null;
+        
+        if (refCode) {
+            const referralCheck = await isReferralCodeValid(refCode);
+            if (referralCheck.valid && referralCheck.referrerId) {
+                referrerId = referralCheck.referrerId;
+                usedReferralCode = refCode;
+            } else {
+                 toast({
+                    variant: "destructive",
+                    title: "Código Inválido",
+                    description: "El código de referido del enlace no es válido.",
+                });
+            }
+        }
+
         const newUserRef = doc(firestore, "users", user.uid);
         batch.set(newUserRef, {
             uid: user.uid,
@@ -65,27 +83,19 @@ export function GoogleButton() {
             points: 0,
             referrals: 0,
             referralCode: generateReferralCode(),
-            completedTasks: []
+            completedTasks: [],
+            referredByCode: usedReferralCode
         });
 
-        const refCode = searchParams.get('ref');
-        if (refCode) {
-            const referralCheck = await isReferralCodeValid(refCode);
-            if (referralCheck.valid && referralCheck.referrerId) {
-                const referralRef = doc(collection(firestore, "referrals"));
-                batch.set(referralRef, {
-                    referrerId: referralCheck.referrerId,
-                    referredId: user.uid,
-                    createdAt: new Date()
-                });
-            } else {
-                 toast({
-                    variant: "destructive",
-                    title: "Código Inválido",
-                    description: "El código de referido del enlace no es válido.",
-                });
-            }
+        if (referrerId) {
+            const referralRef = doc(collection(firestore, "referrals"));
+            batch.set(referralRef, {
+                referrerId: referrerId,
+                referredId: user.uid,
+                createdAt: new Date()
+            });
         }
+        
         await batch.commit();
         toast({
           title: "¡Cuenta creada con Google!",

@@ -94,6 +94,7 @@ export function RegisterForm() {
     startTransition(async () => {
       try {
         let referrerId: string | null = null;
+        let usedReferralCode: string | undefined = undefined;
         if (values.referralCode) {
             const referralCheck = await isReferralCodeValid(values.referralCode);
             if (!referralCheck.valid) {
@@ -105,6 +106,7 @@ export function RegisterForm() {
                 return;
             }
             referrerId = referralCheck.referrerId;
+            usedReferralCode = values.referralCode;
         }
 
         const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
@@ -122,7 +124,8 @@ export function RegisterForm() {
             points: 0,
             referrals: 0,
             referralCode: generateReferralCode(),
-            completedTasks: []
+            completedTasks: [],
+            referredByCode: usedReferralCode
         });
 
         if (referrerId) {
