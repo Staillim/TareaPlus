@@ -6,9 +6,9 @@ import { collection, doc, writeBatch, serverTimestamp, query, getDocs as getSubD
 import { firestore } from "@/lib/firebase/firebase";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Globe, Instagram, Link2, Youtube, History, Loader2, PartyPopper } from "lucide-react";
+import { Globe, Instagram, Link2, Youtube, History, Loader2, PartyPopper, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { differenceInHours } from 'date-fns';
+import { differenceInHours, addHours, differenceInSeconds } from 'date-fns';
 import { Separator } from "../ui/separator";
 
 const iconMap: { [key: string]: React.ElementType } = {
@@ -52,6 +52,34 @@ type TasksSectionProps = {
   userId: string;
 }
 
+const CountdownTimer = ({ nextAvailableDate }: { nextAvailableDate: Date }) => {
+    const [timeLeft, setTimeLeft] = useState(differenceInSeconds(nextAvailableDate, new Date()));
+
+    useEffect(() => {
+        if (timeLeft <= 0) return;
+
+        const interval = setInterval(() => {
+            setTimeLeft(prev => prev - 1);
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [timeLeft]);
+
+    if (timeLeft <= 0) return null;
+
+    const hours = Math.floor(timeLeft / 3600);
+    const minutes = Math.floor((timeLeft % 3600) / 60);
+    const seconds = timeLeft % 60;
+
+    return (
+        <div className="flex items-center gap-2">
+            <Clock className="mr-2 h-4 w-4" />
+            <span>{`${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`}</span>
+        </div>
+    );
+};
+
+
 export function TasksSection({ userId }: TasksSectionProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,7 +91,7 @@ export function TasksSection({ userId }: TasksSectionProps) {
 
   const fetchTasksAndHistory = useCallback(async () => {
     try {
-      const tasksCollection = collection(firestore, "tasks");
+      const tasksCollection = query(collection(firestore, "tasks"), );
       const tasksSnapshot = await getSubDocs(tasksCollection);
       const tasksList = tasksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task));
       setTasks(tasksList.filter(task => task.status === 'active'));
@@ -75,6 +103,7 @@ export function TasksSection({ userId }: TasksSectionProps) {
       const historyMap = new Map<string, Date>();
       historySnapshot.docs.forEach(doc => {
           const data = doc.data() as CompletedTaskHistory;
+          // Store only the most recent completion for each task
           if (!historyMap.has(data.taskId) || historyMap.get(data.taskId)! < data.completedAt.toDate()) {
               historyMap.set(data.taskId, data.completedAt.toDate());
           }
@@ -102,12 +131,12 @@ export function TasksSection({ userId }: TasksSectionProps) {
         
         setActiveTimer(null); // Clear the timer
 
-        if (elapsedTime >= task.duration!) {
+        if (elapsedTime >= (task.duration || 0)) {
             // Time requirement met
             setTaskStatuses(prev => ({ ...prev, [task.id]: 'ready_to_claim' }));
         } else {
             // Time requirement not met
-            const timeLeft = Math.ceil(task.duration! - elapsedTime);
+            const timeLeft = Math.ceil((task.duration || 0) - elapsedTime);
             toast({
                 variant: "destructive",
                 title: "Tiempo insuficiente",
@@ -133,7 +162,8 @@ export function TasksSection({ userId }: TasksSectionProps) {
         setTaskStatuses(prev => ({ ...prev, [task.id]: 'timing' }));
         setActiveTimer({ startTime: Date.now(), task });
     } else {
-        // Instant task (no duration)
+        // Instant task (no duration) -> go straight to claiming
+        setTaskStatuses(prev => ({ ...prev, [task.id]: 'ready_to_claim' }));
         claimReward(task);
     }
   }
@@ -202,24 +232,25 @@ export function TasksSection({ userId }: TasksSectionProps) {
     );
   }
 
-  const isTaskAvailable = (task: Task) => {
-    if (!completedTasks.has(task.id)) {
-        return true; 
+  const getTaskAvailability = (task: Task) => {
+    const lastCompletion = completedTasks.get(task.id);
+    if (!lastCompletion) {
+        return { available: true, nextAvailableDate: null };
     }
     if (!task.repeatable || !task.repeatIntervalHours) {
-        return false;
+        return { available: false, nextAvailableDate: null };
     }
-    const lastCompletion = completedTasks.get(task.id);
-    if (!lastCompletion) return true;
+    
+    const nextAvailableDate = addHours(lastCompletion, task.repeatIntervalHours);
+    const isAvailable = new Date() >= nextAvailableDate;
+    
+    return { available: isAvailable, nextAvailableDate: isAvailable ? null : nextAvailableDate };
+  };
 
-    const hoursSinceCompletion = differenceInHours(new Date(), lastCompletion);
-    return hoursSinceCompletion >= task.repeatIntervalHours;
-  }
-
-  const availableTasks = tasks.filter(isTaskAvailable);
-
-  const getButtonContent = (task: Task) => {
+  const getButtonContent = (task: Task, isAvailable: boolean) => {
     const status = taskStatuses[task.id] || 'idle';
+    if (!isAvailable) return null; // Let the countdown timer handle the content
+
     switch (status) {
         case 'timing':
             return <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Esperando...</>;
@@ -233,14 +264,19 @@ export function TasksSection({ userId }: TasksSectionProps) {
     }
   };
 
+  const allActiveTasks = tasks;
+
   return (
     <section className="space-y-6">
       <h2 className="text-2xl font-bold font-headline text-center bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">Tareas Disponibles</h2>
       <div className="grid grid-cols-1 gap-4">
-        {availableTasks.length > 0 ? availableTasks.map((task) => {
+        {allActiveTasks.length > 0 ? allActiveTasks.map((task) => {
           const Icon = task.repeatable ? History : iconMap[task.type] || Globe;
           const status = taskStatuses[task.id] || 'idle';
           const isProcessing = status === 'timing' || status === 'claiming';
+          
+          const { available, nextAvailableDate } = getTaskAvailability(task);
+          const buttonContent = getButtonContent(task, available);
 
           return (
             <Card key={task.id} className="bg-card/80 backdrop-blur-sm transition-all hover:shadow-md hover:border-primary/20">
@@ -260,18 +296,18 @@ export function TasksSection({ userId }: TasksSectionProps) {
                 <Separator orientation="vertical" className="h-10 hidden sm:block"/>
                 <Separator className="sm:hidden"/>
                 <Button
-                  onClick={() => status === 'ready_to_claim' ? claimReward(task) : startTask(task)}
-                  disabled={isProcessing}
+                  onClick={() => available && (status === 'ready_to_claim' ? claimReward(task) : startTask(task))}
+                  disabled={!available || isProcessing}
                   variant={status === 'ready_to_claim' ? 'default' : 'secondary'}
                   className="w-full sm:w-auto"
                 >
-                  {getButtonContent(task)}
+                  {available ? buttonContent : <CountdownTimer nextAvailableDate={nextAvailableDate!} />}
                 </Button>
               </CardContent>
             </Card>
           );
         }) : (
-            <div className="md:col-span-2 text-center py-10 bg-card/50 rounded-lg">
+            <div className="text-center py-10 bg-card/50 rounded-lg">
                 <p className="text-muted-foreground">No hay nuevas tareas disponibles por el momento.</p>
             </div>
         )}
@@ -279,3 +315,5 @@ export function TasksSection({ userId }: TasksSectionProps) {
     </section>
   );
 }
+
+    
