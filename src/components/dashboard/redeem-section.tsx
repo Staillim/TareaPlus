@@ -18,6 +18,7 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
   } from "@/components/ui/alert-dialog"
+import { getGoogleDriveImageUrl } from '@/lib/utils';
 
 type GiftCard = {
     id: string;
@@ -103,7 +104,7 @@ export function RedeemSection({ userPoints }: RedeemSectionProps) {
           return (
             <Card key={card.id} className="flex flex-col">
               <CardContent className="p-4 flex-grow flex flex-col items-center justify-center">
-                <Image src={card.logoUrl} alt={`${card.name} logo`} width={64} height={64} className="h-16 w-16 object-contain mb-2" />
+                <Image src={getGoogleDriveImageUrl(card.logoUrl)} alt={`${card.name} logo`} width={64} height={64} className="h-16 w-16 object-contain mb-2" />
                 <p className="font-bold text-lg">{card.name}</p>
                 {card.value && <p className="text-sm text-muted-foreground">{card.value}</p>}
               </CardContent>

@@ -11,6 +11,7 @@ import { PlusCircle, Trash2, Loader2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
+import { getGoogleDriveImageUrl } from '@/lib/utils';
 
 type Reward = {
     id: string;
@@ -155,7 +156,7 @@ export function ManageRewards() {
                     {rewards.map((reward) => (
                         <TableRow key={reward.id}>
                         <TableCell>
-                           <Image src={reward.logoUrl} alt={reward.name} width={40} height={40} className="rounded-md object-contain" />
+                           <Image src={getGoogleDriveImageUrl(reward.logoUrl)} alt={reward.name} width={40} height={40} className="rounded-md object-contain" />
                         </TableCell>
                         <TableCell className="font-medium">{reward.name}</TableCell>
                         <TableCell>{reward.points.toLocaleString()}</TableCell>
