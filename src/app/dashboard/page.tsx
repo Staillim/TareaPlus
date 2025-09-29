@@ -1,8 +1,9 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
 import { onAuthStateChanged, User } from "firebase/auth";
-import { doc, onSnapshot, collection, query, where } from "firebase/firestore";
+import { doc, onSnapshot, collection, query, where, updateDoc } from "firebase/firestore";
 import { auth, firestore } from "@/lib/firebase/firebase";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/dashboard/header";
@@ -22,6 +23,15 @@ export type UserData = {
   completedTasks: string[];
 };
 
+const generateReferralCode = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code = '';
+    for (let i = 0; i < 8; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
+};
+
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
@@ -34,16 +44,21 @@ export default function DashboardPage() {
       if (currentUser) {
         setUser(currentUser);
         
-        // Listen to user document
         const userDocRef = doc(firestore, "users", currentUser.uid);
-        const unsubscribeUser = onSnapshot(userDocRef, (doc) => {
+        const unsubscribeUser = onSnapshot(userDocRef, async (doc) => {
           if (doc.exists()) {
             const data = doc.data() as Omit<UserData, 'referrals'>;
             if (data.role === 'admin') {
               router.push('/admin/dashboard');
-              return; // Stop further processing for admins
+              return; 
             }
-             // We will update referrals separately
+
+            if (!data.referralCode) {
+                const newReferralCode = generateReferralCode();
+                await updateDoc(userDocRef, { referralCode: newReferralCode });
+                data.referralCode = newReferralCode;
+            }
+
             setUserData(prevData => ({ ...prevData, ...data } as UserData));
           } else {
              router.push("/");
@@ -55,7 +70,6 @@ export default function DashboardPage() {
             router.push("/");
         });
 
-        // Listen to referrals collection
         const referralsRef = collection(firestore, "referrals");
         const q = query(referralsRef, where("referrerId", "==", currentUser.uid));
         const unsubscribeReferrals = onSnapshot(q, (snapshot) => {
@@ -107,3 +121,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
