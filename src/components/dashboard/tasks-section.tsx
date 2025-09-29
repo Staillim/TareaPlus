@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Globe, Instagram, Link2, Youtube, History, Loader2, PartyPopper } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { differenceInHours } from 'date-fns';
+import { Separator } from "../ui/separator";
 
 const iconMap: { [key: string]: React.ElementType } = {
   visit: Globe,
@@ -235,35 +236,34 @@ export function TasksSection({ userId }: TasksSectionProps) {
   return (
     <section className="space-y-6">
       <h2 className="text-2xl font-bold font-headline text-center bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">Tareas Disponibles</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-4">
         {availableTasks.length > 0 ? availableTasks.map((task) => {
           const Icon = task.repeatable ? History : iconMap[task.type] || Globe;
           const status = taskStatuses[task.id] || 'idle';
           const isProcessing = status === 'timing' || status === 'claiming';
 
           return (
-            <Card key={task.id} className="animated-card from-gradient-1-start to-gradient-1-end">
-              <div className="particles-container">
-                {[...Array(15)].map((_, i) => <div key={i} className="particle"></div>)}
-              </div>
-              <CardContent className="p-4 flex items-center justify-between gap-4">
+            <Card key={task.id} className="bg-card/80 backdrop-blur-sm transition-all hover:shadow-md hover:border-primary/20">
+              <CardContent className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-4 flex-1 overflow-hidden">
-                  <div className="bg-white/20 p-3 rounded-lg backdrop-blur-sm">
-                    <Icon className="h-6 w-6 text-white" />
+                  <div className="bg-primary/10 p-3 rounded-lg">
+                    <Icon className="h-6 w-6 text-primary" />
                   </div>
                   <div className="flex-1">
-                    <p className="font-semibold truncate text-white">{task.title}</p>
-                    <p className="text-sm text-primary-foreground/80">
-                        {task.points} Puntos
+                    <p className="font-semibold truncate">{task.title}</p>
+                    <p className="text-sm text-muted-foreground">
+                        <span className="font-bold text-primary">{task.points} Puntos</span>
                         {task.duration && ` | ${task.duration} seg`}
                     </p>
                   </div>
                 </div>
+                <Separator orientation="vertical" className="h-10 hidden sm:block"/>
+                <Separator className="sm:hidden"/>
                 <Button
-                  size="sm"
                   onClick={() => status === 'ready_to_claim' ? claimReward(task) : startTask(task)}
                   disabled={isProcessing}
-                  className="bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm shadow-lg transition-all duration-300 transform hover:scale-105"
+                  variant={status === 'ready_to_claim' ? 'default' : 'secondary'}
+                  className="w-full sm:w-auto"
                 >
                   {getButtonContent(task)}
                 </Button>
@@ -271,7 +271,7 @@ export function TasksSection({ userId }: TasksSectionProps) {
             </Card>
           );
         }) : (
-            <div className="md:col-span-2 text-center py-10">
+            <div className="md:col-span-2 text-center py-10 bg-card/50 rounded-lg">
                 <p className="text-muted-foreground">No hay nuevas tareas disponibles por el momento.</p>
             </div>
         )}
@@ -279,5 +279,3 @@ export function TasksSection({ userId }: TasksSectionProps) {
     </section>
   );
 }
-
-    
