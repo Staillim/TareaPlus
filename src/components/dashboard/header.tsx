@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -16,7 +17,7 @@ export function Header({ username, points, onLogout }: HeaderProps) {
       <div className="flex items-center gap-3">
         <Avatar className="h-12 w-12 border-2 border-primary">
           <AvatarImage src={`https://api.dicebear.com/7.x/pixel-art/svg?seed=${username}`} />
-          <AvatarFallback>{username.charAt(0).toUpperCase()}</AvatarFallback>
+          <AvatarFallback>{username ? username.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
         </Avatar>
         <div>
           <h1 className="text-lg font-bold font-headline">{username}</h1>
