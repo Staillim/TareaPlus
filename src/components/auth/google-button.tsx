@@ -3,7 +3,7 @@
 
 import { signInWithPopup, getAdditionalUserInfo } from "firebase/auth";
 import { auth, googleProvider, firestore } from "@/lib/firebase/firebase";
-import { doc, setDoc, getDocs, collection, query, where, writeBatch, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, getDoc, collection, query, where, writeBatch, serverTimestamp } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -51,11 +51,13 @@ export function GoogleButton() {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
-      const additionalInfo = getAdditionalUserInfo(result);
       
-      const batch = writeBatch(firestore);
+      const userDocRef = doc(firestore, "users", user.uid);
+      const userDoc = await getDoc(userDocRef);
 
-      if (additionalInfo?.isNewUser) {
+      if (!userDoc.exists()) {
+        // Is a new user
+        const batch = writeBatch(firestore);
         const refCode = searchParams.get('ref');
         let usedReferralCode: string | undefined = undefined;
         let referrerId: string | null = null;
