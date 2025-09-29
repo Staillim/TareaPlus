@@ -9,18 +9,19 @@ import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LayoutDashboard, Settings, PlusCircle, List, Gift, LogOut } from "lucide-react";
+import { LayoutDashboard, Settings, PlusCircle, List, Gift, LogOut, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatsCards } from "@/components/admin/stats-cards";
 import { CreateTaskForm } from "@/components/admin/create-task-form";
 import { ManageTasksTable } from "@/components/admin/manage-tasks-table";
 import { ManageRewards } from "@/components/admin/manage-rewards";
+import { ManageUsersTable } from "@/components/admin/manage-users-table";
 
 type AdminData = {
   username: string;
 };
 
-type View = 'dashboard' | 'create-task' | 'manage-tasks' | 'manage-rewards';
+type View = 'dashboard' | 'create-task' | 'manage-tasks' | 'manage-rewards' | 'manage-users';
 
 export default function AdminDashboardPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -77,6 +78,8 @@ export default function AdminDashboardPage() {
         return <ManageTasksTable />;
       case 'manage-rewards':
         return <ManageRewards />;
+      case 'manage-users':
+        return <ManageUsersTable />;
       default:
         return <StatsCards />;
     }
@@ -116,6 +119,12 @@ export default function AdminDashboardPage() {
                         <SidebarMenuButton onClick={() => setActiveView('manage-tasks')} isActive={activeView === 'manage-tasks'} tooltip="Gestionar Tareas">
                             <List />
                             <span>Gestionar Tareas</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                     <SidebarMenuItem>
+                        <SidebarMenuButton onClick={() => setActiveView('manage-users')} isActive={activeView === 'manage-users'} tooltip="Gestionar Usuarios">
+                            <Users />
+                            <span>Usuarios</span>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
