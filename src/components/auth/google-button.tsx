@@ -19,6 +19,17 @@ const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
   );
 
+// Function to generate a random referral code
+const generateReferralCode = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code = '';
+    for (let i = 0; i < 8; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
+};
+
+
 export function GoogleButton() {
   const { toast } = useToast();
   const router = useRouter();
@@ -36,6 +47,10 @@ export function GoogleButton() {
             username: user.displayName || user.email?.split('@')[0],
             createdAt: new Date(),
             role: 'user',
+            points: 0,
+            referrals: 0,
+            referralCode: generateReferralCode(),
+            completedTasks: []
           });
         toast({
           title: "¡Cuenta creada con Google!",

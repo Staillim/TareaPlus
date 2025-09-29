@@ -42,6 +42,16 @@ const formSchema = z
     path: ["confirmPassword"],
   });
 
+// Function to generate a random referral code
+const generateReferralCode = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code = '';
+    for (let i = 0; i < 8; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
+};
+
 export function RegisterForm() {
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
@@ -70,6 +80,10 @@ export function RegisterForm() {
           username: values.username,
           createdAt: new Date(),
           role: 'user',
+          points: 0,
+          referrals: 0,
+          referralCode: generateReferralCode(),
+          completedTasks: []
         });
         
         toast({

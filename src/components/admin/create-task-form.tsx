@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -6,14 +5,18 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { firestore } from "@/lib/firebase/firebase";
+import { Textarea } from "../ui/textarea";
 
 const taskSchema = z.object({
+  title: z.string().min(5, { message: "El título debe tener al menos 5 caracteres." }),
   type: z.enum(["visit", "follow", "shortener", "video"]),
   url: z.string().url({ message: "Por favor, introduce una URL válida." }),
   duration: z.coerce.number().optional(),
@@ -27,6 +30,7 @@ export function CreateTaskForm() {
   const form = useForm<z.infer<typeof taskSchema>>({
     resolver: zodResolver(taskSchema),
     defaultValues: {
+      title: "",
       url: "",
       points: 100,
     },
@@ -34,15 +38,30 @@ export function CreateTaskForm() {
 
   const taskType = form.watch("type");
 
-  function onSubmit(values: z.infer<typeof taskSchema>) {
-    startTransition(() => {
-      console.log(values);
-      toast({
-        title: "Tarea Publicada",
-        description: "La nueva tarea está ahora disponible para los usuarios.",
-      });
-      form.reset();
-      form.setValue('points', 100);
+  async function onSubmit(values: z.infer<typeof taskSchema>) {
+    startTransition(async () => {
+      try {
+        await addDoc(collection(firestore, "tasks"), {
+          ...values,
+          completions: 0,
+          status: 'active',
+          createdAt: serverTimestamp(),
+        });
+
+        toast({
+          title: "Tarea Publicada",
+          description: "La nueva tarea está ahora disponible para los usuarios.",
+        });
+        form.reset();
+        form.setValue('points', 100);
+      } catch (error) {
+        console.error("Error creating task: ", error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "No se pudo crear la tarea. Inténtalo de nuevo.",
+        });
+      }
     });
   }
 
@@ -55,6 +74,19 @@ export function CreateTaskForm() {
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <CardContent className="space-y-4">
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Título de la Tarea</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Ej: Sigue a @usuario en Instagram" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="type"
@@ -83,10 +115,13 @@ export function CreateTaskForm() {
               name="url"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>URL o Contenido</FormLabel>
+                  <FormLabel>URL de la Tarea</FormLabel>
                   <FormControl>
-                    <Input placeholder="https://ejemplo.com" {...field} />
+                    <Input placeholder="https://ejemplo.com/pagina-a-visitar" {...field} />
                   </FormControl>
+                  <FormDescription>
+                    El enlace que los usuarios deben visitar para completar la tarea.
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -101,6 +136,9 @@ export function CreateTaskForm() {
                     <FormControl>
                       <Input type="number" placeholder="e.g., 60" {...field} />
                     </FormControl>
+                    <FormDescription>
+                        Opcional. El tiempo que el usuario debe permanecer en la página.
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

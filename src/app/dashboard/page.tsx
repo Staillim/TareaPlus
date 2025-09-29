@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { onAuthStateChanged, User } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { auth, firestore } from "@/lib/firebase/firebase";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/dashboard/header";
@@ -10,60 +10,58 @@ import { TasksSection } from "@/components/dashboard/tasks-section";
 import { ReferralsSection } from "@/components/dashboard/referrals-section";
 import { RedeemSection } from "@/components/dashboard/redeem-section";
 import { BottomNav } from "@/components/dashboard/bottom-nav";
-import { Home, Gift, Users, LogOut } from "lucide-react";
+import { Home, Gift, Users } from "lucide-react";
 import { Loader2 } from "lucide-react";
 
-type UserData = {
+export type UserData = {
   username: string;
   points: number;
   referrals: number;
   referralCode: string;
   role: 'user' | 'admin';
+  completedTasks: string[];
 };
 
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("home");
   const router = useRouter();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
         const userDocRef = doc(firestore, "users", currentUser.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists()) {
-          const data = userDoc.data();
-          
-          if (data.role === 'admin') {
-            router.push('/admin/dashboard');
-            return;
+        
+        const unsubscribeSnapshot = onSnapshot(userDocRef, (doc) => {
+          if (doc.exists()) {
+            const data = doc.data() as UserData;
+            if (data.role === 'admin') {
+              router.push('/admin/dashboard');
+              return;
+            }
+            setUserData(data);
+          } else {
+            // User doc doesn't exist, maybe they are a new user
+            // who hasn't been fully setup. Redirect to login.
+             router.push("/");
           }
+          setLoading(false);
+        }, (error) => {
+            console.error("Error fetching user data:", error);
+            setLoading(false);
+            router.push("/");
+        });
 
-          setUserData({
-            username: data.username || "Usuario",
-            points: data.points || 1250,
-            referrals: data.referrals || 5,
-            referralCode: data.referralCode || "AB-12345",
-            role: data.role || 'user',
-          });
-        } else {
-           // Fallback mock data for user
-           setUserData({
-            username: "Usuario",
-            points: 1250,
-            referrals: 5,
-            referralCode: "AB-12345",
-            role: 'user',
-          });
-        }
+        return () => unsubscribeSnapshot();
       } else {
         router.push("/");
       }
     });
 
-    return () => unsubscribe();
+    return () => unsubscribeAuth();
   }, [router]);
 
   const handleLogout = async () => {
@@ -71,7 +69,7 @@ export default function DashboardPage() {
     router.push("/");
   };
   
-  if (!user || !userData) {
+  if (loading || !user || !userData) {
     return (
       <div className="flex min-h-screen w-full items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -90,7 +88,7 @@ export default function DashboardPage() {
       <Header username={userData.username} points={userData.points} onLogout={handleLogout} />
       
       <main className="flex-grow overflow-y-auto p-4 pb-20">
-        {activeTab === "home" && <TasksSection />}
+        {activeTab === "home" && <TasksSection userId={user.uid} completedTasks={userData.completedTasks} />}
         {activeTab === "redeem" && <RedeemSection userPoints={userData.points} />}
         {activeTab === "referrals" && <ReferralsSection referrals={userData.referrals} referralCode={userData.referralCode} />}
       </main>
