@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -8,7 +9,7 @@ import { auth, firestore } from "@/lib/firebase/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { useTransition } from "react";
 import { Loader2 } from "lucide-react";
-import { doc, setDoc, getDocs, collection, query, where, writeBatch } from "firebase/firestore";
+import { doc, setDoc, getDocs, collection, query, where, writeBatch, serverTimestamp } from "firebase/firestore";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -119,12 +120,11 @@ export function RegisterForm() {
             uid: user.uid,
             email: user.email,
             username: values.username,
-            createdAt: new Date(),
+            createdAt: serverTimestamp(),
             role: 'user',
             points: 0,
             referrals: 0,
             referralCode: generateReferralCode(),
-            completedTasks: [],
             referredByCode: usedReferralCode
         });
 
@@ -133,7 +133,7 @@ export function RegisterForm() {
             batch.set(referralRef, {
                 referrerId: referrerId,
                 referredId: user.uid,
-                createdAt: new Date()
+                createdAt: serverTimestamp()
             });
         }
 

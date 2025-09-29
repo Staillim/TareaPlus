@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -13,7 +14,8 @@ import { Loader2 } from "lucide-react";
 import { useTransition } from "react";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { firestore } from "@/lib/firebase/firebase";
-import { Textarea } from "../ui/textarea";
+import { Switch } from "../ui/switch";
+import { Label } from "../ui/label";
 
 const taskSchema = z.object({
   title: z.string().min(5, { message: "El título debe tener al menos 5 caracteres." }),
@@ -21,6 +23,8 @@ const taskSchema = z.object({
   url: z.string().url({ message: "Por favor, introduce una URL válida." }),
   duration: z.coerce.number().optional(),
   points: z.coerce.number().min(1, { message: "Los puntos deben ser al menos 1." }),
+  repeatable: z.boolean().default(false),
+  repeatIntervalHours: z.coerce.number().optional(),
 });
 
 export function CreateTaskForm() {
@@ -33,10 +37,12 @@ export function CreateTaskForm() {
       title: "",
       url: "",
       points: 100,
+      repeatable: false,
     },
   });
 
   const taskType = form.watch("type");
+  const isRepeatable = form.watch("repeatable");
 
   async function onSubmit(values: z.infer<typeof taskSchema>) {
     startTransition(async () => {
@@ -54,6 +60,7 @@ export function CreateTaskForm() {
         });
         form.reset();
         form.setValue('points', 100);
+        form.setValue('repeatable', false);
       } catch (error) {
         console.error("Error creating task: ", error);
         toast({
@@ -157,6 +164,44 @@ export function CreateTaskForm() {
                 </FormItem>
               )}
             />
+            <FormField
+              control={form.control}
+              name="repeatable"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                  <div className="space-y-0.5">
+                    <FormLabel>Tarea Repetible</FormLabel>
+                    <FormDescription>
+                        Permite que los usuarios vuelvan a hacer esta tarea después de un tiempo.
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            {isRepeatable && (
+                <FormField
+                control={form.control}
+                name="repeatIntervalHours"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Intervalo de Repetición (en horas)</FormLabel>
+                    <FormControl>
+                      <Input type="number" placeholder="Ej: 24" {...field} />
+                    </FormControl>
+                     <FormDescription>
+                        El número de horas que el usuario debe esperar para repetir la tarea.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
           </CardContent>
           <CardFooter>
             <Button type="submit" disabled={isPending}>

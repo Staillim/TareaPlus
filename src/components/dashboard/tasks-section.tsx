@@ -2,18 +2,20 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { collection, getDocs, doc, updateDoc, arrayUnion, increment, writeBatch, serverTimestamp } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, writeBatch, serverTimestamp, query, orderBy, limit, getDocs as getSubDocs, collection as subCollection } from "firebase/firestore";
 import { firestore } from "@/lib/firebase/firebase";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Globe, Instagram, Link2, Youtube, Check, Loader2 } from "lucide-react";
+import { Globe, Instagram, Link2, Youtube, Check, Loader2, History } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { differenceInHours } from 'date-fns';
 
 const iconMap: { [key: string]: React.ElementType } = {
   visit: Globe,
   follow: Instagram,
   shortener: Link2,
   video: Youtube,
+  repeatable: History,
 };
 
 type Task = {
@@ -23,50 +25,80 @@ type Task = {
   url: string;
   points: number;
   duration?: number;
+  repeatable?: boolean;
+  repeatIntervalHours?: number;
 };
+
+type CompletedTaskHistory = {
+  taskId: string;
+  completedAt: {
+    toDate: () => Date;
+  };
+}
 
 type TasksSectionProps = {
   userId: string;
-  completedTasks: string[];
 }
 
-export function TasksSection({ userId, completedTasks }: TasksSectionProps) {
+export function TasksSection({ userId }: TasksSectionProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [completing, setCompleting] = useState<string | null>(null);
+  const [completedTasks, setCompletedTasks] = useState<Map<string, Date>>(new Map());
   const { toast } = useToast();
 
   useEffect(() => {
-    const fetchTasks = async () => {
+    const fetchTasksAndHistory = async () => {
       try {
+        // Fetch available tasks
         const tasksCollection = collection(firestore, "tasks");
         const tasksSnapshot = await getDocs(tasksCollection);
         const tasksList = tasksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task));
         // @ts-ignore
         setTasks(tasksList.filter(task => task.status === 'active'));
+
+        // Fetch user's completion history
+        const historyCollection = subCollection(firestore, 'users', userId, 'completedTasksHistory');
+        const historyQuery = query(historyCollection, orderBy('completedAt', 'desc'));
+        const historySnapshot = await getSubDocs(historyQuery);
+        
+        const historyMap = new Map<string, Date>();
+        historySnapshot.docs.forEach(doc => {
+            const data = doc.data() as CompletedTaskHistory;
+            // Store only the most recent completion for each task ID
+            if (!historyMap.has(data.taskId)) {
+                historyMap.set(data.taskId, data.completedAt.toDate());
+            }
+        });
+        setCompletedTasks(historyMap);
+
       } catch (error) {
-        console.error("Error fetching tasks:", error);
-        toast({ variant: "destructive", title: "Error", description: "No se pudieron cargar las tareas." });
+        console.error("Error fetching data:", error);
+        toast({ variant: "destructive", title: "Error", description: "No se pudieron cargar las tareas o el historial." });
       } finally {
         setLoading(false);
       }
     };
-    fetchTasks();
-  }, [toast]);
+    if(userId) {
+        fetchTasksAndHistory();
+    }
+  }, [userId, toast]);
 
   const handleCompleteTask = async (task: Task) => {
     setCompleting(task.id);
     try {
-      if (task.type === 'visit' || task.type === 'video' || task.type === 'shortener' || task.type === 'follow') {
-        openTaskUrl(task.url);
-      }
+      openTaskUrl(task.url);
 
       await new Promise(resolve => setTimeout(resolve, task.duration ? task.duration * 1000 : 2000));
 
+      const now = new Date();
+      const completionTimestamp = serverTimestamp();
+
       const batch = writeBatch(firestore);
       const userRef = doc(firestore, 'users', userId);
+      
+      // We only increment points. We don't touch a "completedTasks" array anymore.
       batch.update(userRef, {
-        completedTasks: arrayUnion(task.id),
         points: increment(task.points)
       });
 
@@ -75,13 +107,17 @@ export function TasksSection({ userId, completedTasks }: TasksSectionProps) {
         completions: increment(1)
       });
       
-      const historyRef = doc(collection(userRef, 'completedTasksHistory'));
+      const historyRef = doc(subCollection(userRef, 'completedTasksHistory'));
       batch.set(historyRef, {
           taskId: task.id,
-          completedAt: serverTimestamp()
+          points: task.points,
+          completedAt: completionTimestamp
       });
 
       await batch.commit();
+      
+      // Optimistically update local state
+      setCompletedTasks(prev => new Map(prev).set(task.id, now));
 
       toast({
         title: "¡Tarea Completada!",
@@ -122,13 +158,28 @@ export function TasksSection({ userId, completedTasks }: TasksSectionProps) {
     );
   }
 
+  const isTaskAvailable = (task: Task) => {
+    if (!completedTasks.has(task.id)) {
+        return true; // Not completed yet
+    }
+    if (!task.repeatable || !task.repeatIntervalHours) {
+        return false; // Completed and not repeatable
+    }
+    const lastCompletion = completedTasks.get(task.id);
+    if (!lastCompletion) return true;
+
+    const hoursSinceCompletion = differenceInHours(new Date(), lastCompletion);
+    return hoursSinceCompletion >= task.repeatIntervalHours;
+  }
+
+  const availableTasks = tasks.filter(isTaskAvailable);
+
   return (
     <section className="space-y-6">
       <h2 className="text-2xl font-bold font-headline text-center bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">Tareas Disponibles</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {tasks.map((task, index) => {
-          const Icon = iconMap[task.type] || Globe;
-          const isCompleted = completedTasks.includes(task.id);
+        {availableTasks.length > 0 ? availableTasks.map((task) => {
+          const Icon = task.repeatable ? History : iconMap[task.type] || Globe;
           const isCompleting = completing === task.id;
 
           return (
@@ -149,17 +200,20 @@ export function TasksSection({ userId, completedTasks }: TasksSectionProps) {
                 <Button
                   size="sm"
                   onClick={() => handleCompleteTask(task)}
-                  disabled={isCompleted || isCompleting}
+                  disabled={isCompleting}
                   className="bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm shadow-lg transition-all duration-300 transform hover:scale-105"
                 >
                   {isCompleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {isCompleted && <Check className="mr-2 h-4 w-4" />}
-                  {isCompleting ? 'Verificando...' : isCompleted ? 'Hecho' : 'Hacer'}
+                  {isCompleting ? 'Verificando...' : 'Hacer'}
                 </Button>
               </CardContent>
             </Card>
           );
-        })}
+        }) : (
+            <div className="md:col-span-2 text-center py-10">
+                <p className="text-muted-foreground">No hay nuevas tareas disponibles por el momento.</p>
+            </div>
+        )}
       </div>
     </section>
   );

@@ -15,7 +15,6 @@ type HistoryItem = {
     taskId?: string;
     rewardId?: string;
     points: number;
-    type: 'earned' | 'spent';
     completedAt: any;
 };
 
@@ -29,6 +28,11 @@ export function PointsHistory({ userId }: { userId: string }) {
     const [itemDetails, setItemDetails] = useState<ItemDetails>({});
 
     useEffect(() => {
+        if (!userId) {
+            setLoading(false);
+            return;
+        };
+
         const historyQuery = query(collection(firestore, `users/${userId}/completedTasksHistory`), orderBy('completedAt', 'desc'));
         
         const unsubscribe = onSnapshot(historyQuery, async (snapshot) => {
@@ -40,23 +44,21 @@ export function PointsHistory({ userId }: { userId: string }) {
                 const item: HistoryItem = {
                     id: doc.id,
                     ...data,
-                    type: 'earned', // Assuming all history is earning for now
                 } as HistoryItem;
                 historyData.push(item);
                 if (data.taskId && !itemDetails[data.taskId]) {
                     detailsToFetch.push({ type: 'task', id: data.taskId });
                 }
-                // Add spent logic later
+                // Later, add logic for rewards if they generate a history record
             });
 
             if (detailsToFetch.length > 0) {
                 const newDetails: ItemDetails = {};
                 const promises = detailsToFetch.map(async (detail) => {
-                    const collectionName = detail.type === 'task' ? 'tasks' : 'rewards';
-                    const docRef = doc(firestore, collectionName, detail.id);
+                    const docRef = doc(firestore, 'tasks', detail.id);
                     const docSnap = await getDoc(docRef);
                     if (docSnap.exists()) {
-                        newDetails[detail.id] = docSnap.data().title || docSnap.data().name || "Item Desconocido";
+                        newDetails[detail.id] = docSnap.data().title || "Tarea Desconocida";
                     }
                 });
                 await Promise.all(promises);
@@ -65,16 +67,20 @@ export function PointsHistory({ userId }: { userId: string }) {
 
             setHistory(historyData);
             setLoading(false);
+        }, (error) => {
+            console.error("Failed to fetch history:", error);
+            setLoading(false);
         });
 
         return () => unsubscribe();
     }, [userId]);
 
     const renderIcon = (item: HistoryItem) => {
-        if (item.type === 'earned') {
+        // For now, we only have point gains.
+        if (item.points > 0) {
             return <PlusCircle className="h-5 w-5 text-green-500" />;
         }
-        if (item.type === 'spent') {
+        if (item.points < 0) {
             return <MinusCircle className="h-5 w-5 text-red-500" />;
         }
         return <HelpCircle className="h-5 w-5 text-muted-foreground" />;
@@ -97,8 +103,7 @@ export function PointsHistory({ userId }: { userId: string }) {
                     <ScrollArea className="h-[300px] pr-4">
                         <div className="space-y-4">
                             {history.map(item => {
-                                const detailKey = item.taskId || item.rewardId;
-                                const description = detailKey ? itemDetails[detailKey] : (item.type === 'earned' ? 'Puntos ganados' : 'Puntos gastados');
+                                const description = item.taskId ? itemDetails[item.taskId] : 'Puntos';
                                 const timeAgo = item.completedAt ? formatDistanceToNow(item.completedAt.toDate(), { addSuffix: true, locale: es }) : '';
 
                                 return (
@@ -108,8 +113,8 @@ export function PointsHistory({ userId }: { userId: string }) {
                                             <p className="font-semibold">{description}</p>
                                             <p className="text-sm text-muted-foreground">{timeAgo}</p>
                                         </div>
-                                        <div className={`font-bold ${item.type === 'earned' ? 'text-green-500' : 'text-red-500'}`}>
-                                            {item.type === 'earned' ? '+' : '-'}{item.points.toLocaleString()}
+                                        <div className={`font-bold ${item.points > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                            {item.points > 0 ? '+' : ''}{item.points.toLocaleString()}
                                         </div>
                                     </div>
                                 );

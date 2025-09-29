@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { onAuthStateChanged, User } from "firebase/auth";
-import { doc, onSnapshot, collection, query, where, updateDoc } from "firebase/firestore";
+import { doc, onSnapshot } from "firebase/firestore";
 import { auth, firestore } from "@/lib/firebase/firebase";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/dashboard/header";
@@ -22,16 +22,6 @@ export type UserData = {
   referrals: number;
   referralCode: string;
   role: 'user' | 'admin';
-  completedTasks: string[];
-};
-
-const generateReferralCode = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let code = '';
-    for (let i = 0; i < 8; i++) {
-        code += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return code;
 };
 
 export default function DashboardPage() {
@@ -49,19 +39,12 @@ export default function DashboardPage() {
         const userDocRef = doc(firestore, "users", currentUser.uid);
         const unsubscribeUser = onSnapshot(userDocRef, async (doc) => {
           if (doc.exists()) {
-            const data = doc.data() as Omit<UserData, 'referrals'>;
+            const data = doc.data() as UserData;
             if (data.role === 'admin') {
               router.push('/admin/dashboard');
               return; 
             }
-
-            if (!data.referralCode) {
-                const newReferralCode = generateReferralCode();
-                await updateDoc(userDocRef, { referralCode: newReferralCode });
-                setUserData(prev => ({ ...prev, referralCode: newReferralCode } as UserData));
-            }
-
-            setUserData(prevData => ({ ...prevData, ...data } as UserData));
+            setUserData(data);
           } else {
              router.push("/");
           }
@@ -72,16 +55,7 @@ export default function DashboardPage() {
             router.push("/");
         });
 
-        const referralsRef = collection(firestore, "referrals");
-        const q = query(referralsRef, where("referrerId", "==", currentUser.uid));
-        const unsubscribeReferrals = onSnapshot(q, (snapshot) => {
-            setUserData(prevData => ({ ...prevData, referrals: snapshot.size } as UserData));
-        });
-
-        return () => {
-          unsubscribeUser();
-          unsubscribeReferrals();
-        }
+        return () => unsubscribeUser();
       } else {
         router.push("/");
       }
@@ -112,17 +86,17 @@ export default function DashboardPage() {
 
   const renderContent = () => {
     switch(activeTab) {
-      case "home": return <TasksSection userId={user.uid} completedTasks={userData.completedTasks || []} />;
+      case "home": return <TasksSection userId={user.uid} />;
       case "redeem": return <RedemptionContainer user={user} userPoints={userData.points} />;
       case "referrals": return <ReferralsSection referrals={userData.referrals || 0} referralCode={userData.referralCode} />;
       case "profile": return <ProfileSection user={user} userData={userData} />;
-      default: return <TasksSection userId={user.uid} completedTasks={userData.completedTasks || []} />;
+      default: return <TasksSection userId={user.uid} />;
     }
   }
 
   return (
     <SidebarProvider>
-      <div className="flex flex-1 min-h-screen bg-background text-foreground">
+       <div className="flex flex-1 min-h-screen bg-background text-foreground">
         <Sidebar collapsible="icon" className="hidden md:flex bg-sidebar/80 backdrop-blur-xl border-r border-border/20">
           <SidebarContent>
             <SidebarMenu>
@@ -161,5 +135,3 @@ export default function DashboardPage() {
     </SidebarProvider>
   );
 }
-
-    

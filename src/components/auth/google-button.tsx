@@ -1,8 +1,9 @@
+
 "use client";
 
 import { signInWithPopup, getAdditionalUserInfo } from "firebase/auth";
 import { auth, googleProvider, firestore } from "@/lib/firebase/firebase";
-import { doc, setDoc, getDocs, collection, query, where, writeBatch } from "firebase/firestore";
+import { doc, setDoc, getDocs, collection, query, where, writeBatch, serverTimestamp } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -78,12 +79,11 @@ export function GoogleButton() {
             uid: user.uid,
             email: user.email,
             username: user.displayName || user.email?.split('@')[0],
-            createdAt: new Date(),
+            createdAt: serverTimestamp(),
             role: 'user',
             points: 0,
             referrals: 0,
             referralCode: generateReferralCode(),
-            completedTasks: [],
             referredByCode: usedReferralCode
         });
 
@@ -92,7 +92,7 @@ export function GoogleButton() {
             batch.set(referralRef, {
                 referrerId: referrerId,
                 referredId: user.uid,
-                createdAt: new Date()
+                createdAt: serverTimestamp()
             });
         }
         
