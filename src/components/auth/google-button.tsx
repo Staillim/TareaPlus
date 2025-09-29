@@ -3,7 +3,7 @@
 
 import { signInWithPopup, getAdditionalUserInfo } from "firebase/auth";
 import { auth, googleProvider, firestore } from "@/lib/firebase/firebase";
-import { doc, setDoc, getDoc, collection, query, where, writeBatch, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, getDoc, collection, query, where, getDocs, writeBatch, serverTimestamp } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -86,7 +86,7 @@ export function GoogleButton() {
             points: 0,
             referrals: 0,
             referralCode: generateReferralCode(),
-            referredByCode: usedReferralCode
+            ...(usedReferralCode && { referredByCode: usedReferralCode })
         });
 
         if (referrerId) {

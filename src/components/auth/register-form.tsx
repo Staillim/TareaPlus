@@ -125,7 +125,7 @@ export function RegisterForm() {
             points: 0,
             referrals: 0,
             referralCode: generateReferralCode(),
-            referredByCode: usedReferralCode
+            ...(usedReferralCode && { referredByCode: usedReferralCode })
         });
 
         if (referrerId) {
