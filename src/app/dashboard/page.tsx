@@ -13,8 +13,7 @@ import { RedeemSection } from "@/components/dashboard/redeem-section";
 import { BottomNav } from "@/components/dashboard/bottom-nav";
 import { Home, Gift, Users, LogOut } from "lucide-react";
 import { Loader2 } from "lucide-react";
-import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter, SidebarTrigger } from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
+import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter } from "@/components/ui/sidebar";
 
 export type UserData = {
   username: string;
@@ -147,9 +146,7 @@ export default function DashboardPage() {
         </Sidebar>
         
         <div className="flex-1 flex flex-col">
-          <Header username={userData.username} points={userData.points} onLogout={handleLogout}>
-             <SidebarTrigger className="md:hidden ml-2" />
-          </Header>
+          <Header username={userData.username} points={userData.points} onLogout={handleLogout} />
           
           <main className="flex-grow overflow-y-auto p-4 md:p-6 pb-24 md:pb-6">
             {renderContent()}
