@@ -1,5 +1,6 @@
 import type {Metadata} from 'next';
 import './globals.css';
+import './animations.css';
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
@@ -20,7 +21,17 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=PT+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased">
-        {children}
+        <main className="relative min-h-screen overflow-x-hidden">
+          <div className="absolute top-0 left-0 w-full h-full bg-background -z-10">
+            <div className="orb-container">
+              <div className="orb" style={{'--orb-color': 'hsl(var(--orb-1))', '--orb-blur': '100px', '--orb-size': '200px', top: '10%', left: '20%'}}></div>
+              <div className="orb" style={{'--orb-color': 'hsl(var(--orb-2))', '--orb-blur': '120px', '--orb-size': '250px', top: '30%', left: '70%'}}></div>
+              <div className="orb" style={{'--orb-color': 'hsl(var(--orb-3))', '--orb-blur': '80px', '--orb-size': '150px', top: '80%', left: '10%'}}></div>
+              <div className="orb" style={{'--orb-color': 'hsl(var(--orb-4))', '--orb-blur': '150px', '--orb-size': '300px', top: '60%', left: '90%'}}></div>
+            </div>
+          </div>
+          {children}
+        </main>
         <Toaster />
       </body>
     </html>

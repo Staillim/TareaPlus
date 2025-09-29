@@ -38,25 +38,28 @@ export function ReferralsSection({ referrals, referralCode }: ReferralsSectionPr
     }
 
   return (
-    <section className="space-y-4 animate-in fade-in-0 zoom-in-95">
-      <h2 className="text-xl font-bold font-headline">Programa de Referidos</h2>
-      <Card>
-        <CardContent className="p-6 text-center">
-            <UserPlus className="h-12 w-12 mx-auto text-primary" />
-            <p className="text-4xl font-bold mt-2">{referrals}</p>
-            <p className="text-muted-foreground">Amigos Referidos</p>
+    <section className="space-y-6">
+      <h2 className="text-2xl font-bold font-headline text-center bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">Programa de Referidos</h2>
+      <Card className="animated-card from-gradient-3-start to-gradient-3-end text-center">
+         <div className="particles-container">
+            {[...Array(25)].map((_, i) => <div key={i} className="particle"></div>)}
+        </div>
+        <CardContent className="p-6">
+            <UserPlus className="h-12 w-12 mx-auto text-white" />
+            <p className="text-4xl font-bold mt-2 text-white">{referrals}</p>
+            <p className="text-white/80">Amigos Referidos</p>
         </CardContent>
       </Card>
-      <Card>
+      <Card className="bg-card/80 backdrop-blur-sm">
         <CardHeader>
-            <CardTitle className="text-lg">Tu Código de Invitación</CardTitle>
+            <CardTitle className="text-lg text-center">Tu Código de Invitación</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-center p-3 border-2 border-dashed border-primary rounded-lg bg-primary/10">
             <span className="text-2xl font-mono font-bold text-primary tracking-widest">{referralCode}</span>
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <Button onClick={handleCopy}>
+          <div className="grid grid-cols-2 gap-4">
+            <Button onClick={handleCopy} variant="secondary" className="bg-primary/80 hover:bg-primary text-primary-foreground">
                 <Clipboard className="mr-2 h-4 w-4" />
                 Copiar
             </Button>

@@ -1,0 +1,110 @@
+.animated-card {
+    position: relative;
+    overflow: hidden;
+    transition: transform 500ms, box-shadow 500ms;
+    background-image: linear-gradient(135deg, var(--tw-gradient-from), var(--tw-gradient-to));
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2), 0 6px 6px rgba(0,0,0,0.23);
+}
+
+.animated-card:hover {
+    transform: translateY(-10px) rotateZ(1deg);
+    box-shadow: 0 19px 38px rgba(0,0,0,0.30), 0 15px 12px rgba(0,0,0,0.22);
+}
+
+.animated-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 200%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    transition: transform 800ms;
+    transform: translateX(-100%);
+}
+
+.animated-card:hover::before {
+    transform: translateX(100%);
+    animation: shimmer 3s infinite 500ms;
+}
+
+.orb-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: 0;
+}
+
+.orb {
+    position: absolute;
+    border-radius: 50%;
+    background-color: var(--orb-color);
+    filter: blur(var(--orb-blur));
+    width: var(--orb-size);
+    height: var(--orb-size);
+    animation: pulse-orb var(--duration, 8s) ease-in-out infinite alternate;
+}
+
+.orb:nth-child(1) { animation-delay: 0s; animation-duration: 10s; }
+.orb:nth-child(2) { animation-delay: -2s; animation-duration: 12s; }
+.orb:nth-child(3) { animation-delay: -4s; animation-duration: 9s; }
+.orb:nth-child(4) { animation-delay: -6s; animation-duration: 11s; }
+
+
+.particles-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.particle {
+    position: absolute;
+    width: 3px;
+    height: 3px;
+    background: white;
+    border-radius: 50%;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.animated-card:hover .particle {
+    --tx: calc((var(--i) - 7) * 15px);
+    --ty: calc((var(--j) - 7) * 15px);
+    --duration: calc(1s + var(--rand) * 1s);
+    top: 50%;
+    left: 50%;
+    animation: particle-float var(--duration) ease-out forwards;
+}
+
+.particles-container .particle:nth-child(1) { --i: 1; --j: 3; --rand: 0.1; }
+.particles-container .particle:nth-child(2) { --i: 2; --j: 6; --rand: 0.2; }
+.particles-container .particle:nth-child(3) { --i: 3; --j: 1; --rand: 0.3; }
+.particles-container .particle:nth-child(4) { --i: 4; --j: 8; --rand: 0.4; }
+.particles-container .particle:nth-child(5) { --i: 5; --j: 2; --rand: 0.5; }
+.particles-container .particle:nth-child(6) { --i: 6; --j: 7; --rand: 0.6; }
+.particles-container .particle:nth-child(7) { --i: 7; --j: 4; --rand: 0.7; }
+.particles-container .particle:nth-child(8) { --i: 8; --j: 9; --rand: 0.8; }
+.particles-container .particle:nth-child(9) { --i: 9; --j: 1; --rand: 0.9; }
+.particles-container .particle:nth-child(10) { --i: 10; --j: 5; --rand: 0.1; }
+.particles-container .particle:nth-child(11) { --i: 1; --j: 8; --rand: 0.2; }
+.particles-container .particle:nth-child(12) { --i: 3; --j: 5; --rand: 0.3; }
+.particles-container .particle:nth-child(13) { --i: 6; --j: 2; --rand: 0.4; }
+.particles-container .particle:nth-child(14) { --i: 8; --j: 7; --rand: 0.5; }
+.particles-container .particle:nth-child(15) { --i: 10; --j: 3; --rand: 0.6; }
+.particles-container .particle:nth-child(16) { --i: 2; --j: 9; --rand: 0.7; }
+.particles-container .particle:nth-child(17) { --i: 5; --j: 4; --rand: 0.8; }
+.particles-container .particle:nth-child(18) { --i: 7; --j: 1; --rand: 0.9; }
+.particles-container .particle:nth-child(19) { --i: 9; --j: 6; --rand: 0.1; }
+.particles-container .particle:nth-child(20) { --i: 4; --j: 3; --rand: 0.2; }
+.particles-container .particle:nth-child(21) { --i: 1; --j: 7; --rand: 0.3; }
+.particles-container .particle:nth-child(22) { --i: 6; --j: 9; --rand: 0.4; }
+.particles-container .particle:nth-child(23) { --i: 8; --j: 2; --rand: 0.5; }
+.particles-container .particle:nth-child(24) { --i: 2; --j: 4; --rand: 0.6; }
+.particles-container .particle:nth-child(25) { --i: 5; --j: 8; --rand: 0.7; }
+

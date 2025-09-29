@@ -19,6 +19,7 @@ import {
     AlertDialogTrigger,
   } from "@/components/ui/alert-dialog"
 import { getGoogleDriveImageUrl } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 
 type GiftCard = {
     id: string;
@@ -73,19 +74,19 @@ export function RedeemSection({ userPoints }: RedeemSectionProps) {
 
   if (loading) {
     return (
-        <section className="space-y-4 animate-in fade-in-0 zoom-in-95">
-          <h2 className="text-xl font-bold font-headline">Canjear Recompensas</h2>
-          <div className="grid grid-cols-2 gap-4">
+        <section className="space-y-6">
+          <h2 className="text-2xl font-bold font-headline text-center bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">Canjear Recompensas</h2>
+          <div className="grid grid-cols-2 gap-6">
             {[...Array(4)].map((_, i) => (
-                <Card key={i} className="flex flex-col">
+                <Card key={i} className="bg-card/80 backdrop-blur-sm flex flex-col">
                     <CardContent className="p-4 flex-grow flex flex-col items-center justify-center space-y-2">
-                        <div className="h-16 w-16 bg-muted rounded-lg animate-pulse" />
-                        <div className="h-5 w-24 bg-muted rounded animate-pulse" />
-                        <div className="h-4 w-16 bg-muted rounded animate-pulse" />
+                        <div className="h-16 w-16 bg-muted/50 rounded-lg animate-pulse" />
+                        <div className="h-5 w-24 bg-muted/50 rounded animate-pulse" />
+                        <div className="h-4 w-16 bg-muted/50 rounded animate-pulse" />
                     </CardContent>
-                    <CardFooter className="p-2 border-t">
+                    <CardFooter className="p-2 border-t border-border/20">
                         <Button className="w-full" disabled>
-                            <div className="h-5 w-20 bg-muted rounded animate-pulse" />
+                            <div className="h-5 w-20 bg-muted/50 rounded animate-pulse" />
                         </Button>
                     </CardFooter>
                 </Card>
@@ -96,26 +97,29 @@ export function RedeemSection({ userPoints }: RedeemSectionProps) {
   }
   
   return (
-    <section className="space-y-4 animate-in fade-in-0 zoom-in-95">
-      <h2 className="text-xl font-bold font-headline">Canjear Recompensas</h2>
-      <div className="grid grid-cols-2 gap-4">
+    <section className="space-y-6">
+      <h2 className="text-2xl font-bold font-headline text-center bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">Canjear Recompensas</h2>
+      <div className="grid grid-cols-2 gap-6">
         {rewards.map((card) => {
           const canAfford = userPoints >= card.points;
           return (
-            <Card key={card.id} className="flex flex-col">
-              <CardContent className="p-4 flex-grow flex flex-col items-center justify-center">
-                <Image src={getGoogleDriveImageUrl(card.logoUrl)} alt={`${card.name} logo`} width={64} height={64} className="h-16 w-16 object-contain mb-2" />
-                <p className="font-bold text-lg">{card.name}</p>
-                {card.value && <p className="text-sm text-muted-foreground">{card.value}</p>}
+            <Card key={card.id} className={cn("animated-card from-gradient-2-start to-gradient-2-end flex flex-col", !canAfford && "opacity-50 grayscale")}>
+               <div className="particles-container">
+                {[...Array(15)].map((_, i) => <div key={i} className="particle"></div>)}
+              </div>
+              <CardContent className="p-4 flex-grow flex flex-col items-center justify-center text-center">
+                <Image src={getGoogleDriveImageUrl(card.logoUrl)} alt={`${card.name} logo`} width={64} height={64} className="h-16 w-16 object-contain mb-2 drop-shadow-lg" />
+                <p className="font-bold text-lg text-white">{card.name}</p>
+                {card.value && <p className="text-sm text-white/80">{card.value}</p>}
               </CardContent>
-              <CardFooter className="p-2 border-t">
+              <CardFooter className="p-2 mt-auto border-t border-white/10">
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
-                        <Button className="w-full" disabled={!canAfford}>
+                        <Button className="w-full bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm shadow-lg transition-all duration-300 transform hover:scale-105 disabled:bg-white/10" disabled={!canAfford}>
                             {card.points.toLocaleString()} Puntos
                         </Button>
                     </AlertDialogTrigger>
-                    <AlertDialogContent>
+                    <AlertDialogContent className="bg-card/80 backdrop-blur-xl border-border/50">
                         <AlertDialogHeader>
                         <AlertDialogTitle>¿Confirmar canje?</AlertDialogTitle>
                         <AlertDialogDescription>

@@ -42,6 +42,7 @@ export function TasksSection({ userId, completedTasks }: TasksSectionProps) {
         const tasksCollection = collection(firestore, "tasks");
         const tasksSnapshot = await getDocs(tasksCollection);
         const tasksList = tasksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task));
+        // @ts-ignore
         setTasks(tasksList.filter(task => task.status === 'active'));
       } catch (error) {
         console.error("Error fetching tasks:", error);
@@ -56,30 +57,24 @@ export function TasksSection({ userId, completedTasks }: TasksSectionProps) {
   const handleCompleteTask = async (task: Task) => {
     setCompleting(task.id);
     try {
-      // Open URL before showing toast
       if (task.type === 'visit' || task.type === 'video' || task.type === 'shortener' || task.type === 'follow') {
         openTaskUrl(task.url);
       }
 
-      // Simulate task verification delay
       await new Promise(resolve => setTimeout(resolve, task.duration ? task.duration * 1000 : 2000));
 
       const batch = writeBatch(firestore);
-
-      // 1. Update user document
       const userRef = doc(firestore, 'users', userId);
       batch.update(userRef, {
         completedTasks: arrayUnion(task.id),
         points: increment(task.points)
       });
 
-      // 2. Update task document
       const taskRef = doc(firestore, 'tasks', task.id);
       batch.update(taskRef, {
         completions: increment(1)
       });
       
-      // 3. Add to user's completed tasks history
       const historyRef = doc(collection(userRef, 'completedTasksHistory'));
       batch.set(historyRef, {
           taskId: task.id,
@@ -113,7 +108,7 @@ export function TasksSection({ userId, completedTasks }: TasksSectionProps) {
     return (
       <div className="space-y-4">
         {[...Array(3)].map((_, i) => (
-          <Card key={i} className="p-4">
+          <Card key={i} className="p-4 bg-card/80 backdrop-blur-sm">
             <div className="flex items-center gap-4">
               <div className="bg-muted p-3 rounded-lg animate-pulse h-12 w-12" />
               <div className="flex-1 space-y-2">
@@ -128,34 +123,38 @@ export function TasksSection({ userId, completedTasks }: TasksSectionProps) {
   }
 
   return (
-    <section className="space-y-4 animate-in fade-in-0 zoom-in-95">
-      <h2 className="text-xl font-bold font-headline">Tareas Disponibles</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {tasks.map((task) => {
+    <section className="space-y-6">
+      <h2 className="text-2xl font-bold font-headline text-center bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">Tareas Disponibles</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {tasks.map((task, index) => {
           const Icon = iconMap[task.type] || Globe;
           const isCompleted = completedTasks.includes(task.id);
           const isCompleting = completing === task.id;
 
           return (
-            <Card key={task.id} className="overflow-hidden">
+            <Card key={task.id} className="animated-card from-gradient-1-start to-gradient-1-end">
+              <div className="particles-container">
+                {[...Array(15)].map((_, i) => <div key={i} className="particle"></div>)}
+              </div>
               <CardContent className="p-4 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-4 flex-1 overflow-hidden">
-                  <div className="bg-secondary p-3 rounded-lg">
-                    <Icon className="h-6 w-6 text-secondary-foreground" />
+                  <div className="bg-white/20 p-3 rounded-lg backdrop-blur-sm">
+                    <Icon className="h-6 w-6 text-white" />
                   </div>
                   <div className="flex-1">
-                    <p className="font-semibold truncate">{task.title}</p>
-                    <p className="text-sm text-primary">{task.points} Puntos</p>
+                    <p className="font-semibold truncate text-white">{task.title}</p>
+                    <p className="text-sm text-primary-foreground/80">{task.points} Puntos</p>
                   </div>
                 </div>
                 <Button
                   size="sm"
                   onClick={() => handleCompleteTask(task)}
                   disabled={isCompleted || isCompleting}
+                  className="bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm shadow-lg transition-all duration-300 transform hover:scale-105"
                 >
                   {isCompleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   {isCompleted && <Check className="mr-2 h-4 w-4" />}
-                  {isCompleting ? 'Verificando...' : isCompleted ? 'Completada' : 'Completar'}
+                  {isCompleting ? 'Verificando...' : isCompleted ? 'Hecho' : 'Hacer'}
                 </Button>
               </CardContent>
             </Card>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { onAuthStateChanged, User } from "firebase/auth";
-import { doc, getDoc, onSnapshot } from "firebase/firestore";
+import { doc, onSnapshot } from "firebase/firestore";
 import { auth, firestore } from "@/lib/firebase/firebase";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/dashboard/header";
@@ -44,8 +44,6 @@ export default function DashboardPage() {
             }
             setUserData(data);
           } else {
-            // User doc doesn't exist, maybe they are a new user
-            // who hasn't been fully setup. Redirect to login.
              router.push("/");
           }
           setLoading(false);
@@ -84,10 +82,10 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="flex flex-col h-screen bg-background text-foreground font-body">
+    <div className="flex flex-col min-h-screen text-foreground font-body">
       <Header username={userData.username} points={userData.points} onLogout={handleLogout} />
       
-      <main className="flex-grow overflow-y-auto p-4 pb-20">
+      <main className="flex-grow overflow-y-auto p-4 md:p-6 pb-24">
         {activeTab === "home" && <TasksSection userId={user.uid} completedTasks={userData.completedTasks} />}
         {activeTab === "redeem" && <RedeemSection userPoints={userData.points} />}
         {activeTab === "referrals" && <ReferralsSection referrals={userData.referrals} referralCode={userData.referralCode} />}

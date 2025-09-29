@@ -12,10 +12,10 @@ export function AuthForm() {
   const [view, setView] = useState<"auth" | "forgot-password">("auth");
 
   return (
-    <>
+    <div className="w-full max-w-md mx-auto">
       {view === "auth" && (
-        <Tabs defaultValue="login" className="w-full max-w-md animate-in fade-in-0 zoom-in-95">
-          <Card>
+        <Tabs defaultValue="login" className="w-full animate-in fade-in-0 zoom-in-95">
+          <Card className="bg-card/80 backdrop-blur-xl border-border/50">
             <CardHeader className="text-center">
               <CardTitle className="font-headline text-2xl flex items-center justify-center gap-2">
                 <Lock className="h-6 w-6 text-primary" />
@@ -23,7 +23,7 @@ export function AuthForm() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-2 bg-muted/50">
                 <TabsTrigger value="login">Iniciar Sesión</TabsTrigger>
                 <TabsTrigger value="register">Registrarse</TabsTrigger>
               </TabsList>
@@ -40,6 +40,6 @@ export function AuthForm() {
       {view === "forgot-password" && (
         <ForgotPasswordForm onBackToLogin={() => setView("auth")} />
       )}
-    </>
+    </div>
   );
 }
