@@ -5,46 +5,55 @@ service cloud.firestore {
 
     // Reglas para la colección 'users'
     match /users/{userId} {
-      // Un usuario solo puede leer y escribir en su propio documento.
-      // Un usuario solo puede crear un documento para sí mismo.
-      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
-      allow create: if request.auth != null;
+      // Un usuario puede leer su propio perfil si está autenticado
+      allow get: if request.auth != null && request.auth.uid == userId;
 
-      // El administrador puede leer cualquier documento de usuario.
-      allow get: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      // Un usuario puede crear su propio perfil durante el registro
+      allow create: if request.auth != null && request.auth.uid == userId;
 
-      // Historial de tareas completadas de un usuario
-      match /completedTasksHistory/{historyId} {
-        allow create: if request.auth != null && request.auth.uid == userId;
-        allow read: if request.auth != null && request.auth.uid == userId;
-      }
+      // Un usuario puede actualizar su propio perfil
+      allow update: if request.auth != null && request.auth.uid == userId;
+
+      // Los usuarios no pueden listar ni eliminar perfiles de otros
+      allow list, delete: if false;
+
+      // Un usuario no autenticado puede leer los códigos de referido
+      allow list: if request.auth == null;
+    }
+    
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
     // Reglas para la colección 'tasks'
     match /tasks/{taskId} {
-      // Los administradores pueden hacer todo.
-      allow read, write, create, delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-      // Los usuarios autenticados pueden leer tareas.
-      allow get: if request.auth != null;
-      allow list: if request.auth != null;
+      // Cualquier usuario autenticado puede leer las tareas
+      allow read: if request.auth != null;
+      // Solo los administradores pueden crear, actualizar o eliminar tareas
+      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     // Reglas para la colección 'rewards'
     match /rewards/{rewardId} {
-        // Los administradores pueden gestionar las recompensas.
-        allow write, create, delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-        // Cualquier usuario autenticado puede leer las recompensas.
-        allow read: if request.auth != null;
+       // Cualquier usuario autenticado puede leer las recompensas
+      allow read: if request.auth != null;
+      // Solo los administradores pueden escribir en las recompensas
+      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
-
+    
     // Reglas para la colección 'referrals'
     match /referrals/{referralId} {
-      // Un usuario puede leer los registros de referidos donde él es el referente.
-      allow read: if request.auth != null && resource.data.referrerId == request.auth.uid;
-      // Cualquier usuario autenticado puede crear un nuevo registro de referido.
+      // Un usuario puede crear un registro de referido
       allow create: if request.auth != null;
-      // Permite que la consulta para contar referidos funcione.
+      
+      // Un usuario puede leer la lista de referidos para contar los suyos
       allow list: if request.auth != null;
+
+      // Un usuario solo puede leer un documento de referido si él es el referente
+      allow get: if request.auth != null && resource.data.referrerId == request.auth.uid;
+
+      // Nadie puede actualizar o eliminar registros de referidos directamente
+      allow update, delete: if false;
     }
   }
 }
