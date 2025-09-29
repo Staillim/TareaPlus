@@ -10,11 +10,13 @@ import { Label } from "@/components/ui/label";
 import { PlusCircle, Trash2, Loader2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from '@/hooks/use-toast';
+import Image from 'next/image';
 
 type Reward = {
     id: string;
     name: string;
     points: number;
+    logoUrl: string;
 }
 
 export function ManageRewards() {
@@ -22,6 +24,7 @@ export function ManageRewards() {
   const [loading, setLoading] = useState(true);
   const [newRewardName, setNewRewardName] = useState("");
   const [newRewardPoints, setNewRewardPoints] = useState("");
+  const [newRewardLogoUrl, setNewRewardLogoUrl] = useState("");
   const [isAdding, setIsAdding] = useState(false);
   const { toast } = useToast();
 
@@ -40,11 +43,11 @@ export function ManageRewards() {
   }, [toast]);
 
   const handleAddReward = async () => {
-    if (!newRewardName || !newRewardPoints) {
+    if (!newRewardName || !newRewardPoints || !newRewardLogoUrl) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Por favor, completa ambos campos.",
+        description: "Por favor, completa todos los campos.",
       });
       return;
     }
@@ -53,9 +56,11 @@ export function ManageRewards() {
         await addDoc(collection(firestore, "rewards"), {
             name: newRewardName,
             points: parseInt(newRewardPoints, 10),
+            logoUrl: newRewardLogoUrl,
         });
         setNewRewardName("");
         setNewRewardPoints("");
+        setNewRewardLogoUrl("");
         toast({
           title: "Recompensa Añadida",
           description: `Se ha añadido la recompensa "${newRewardName}".`
@@ -108,6 +113,16 @@ export function ManageRewards() {
               disabled={isAdding}
             />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="reward-logo">URL del Logo</Label>
+            <Input 
+              id="reward-logo" 
+              placeholder="https://ejemplo.com/logo.png"
+              value={newRewardLogoUrl}
+              onChange={(e) => setNewRewardLogoUrl(e.target.value)}
+              disabled={isAdding}
+            />
+          </div>
         </CardContent>
         <CardFooter>
           <Button onClick={handleAddReward} disabled={isAdding}>
@@ -130,6 +145,7 @@ export function ManageRewards() {
                 <Table>
                     <TableHeader>
                     <TableRow>
+                        <TableHead>Logo</TableHead>
                         <TableHead>Nombre</TableHead>
                         <TableHead>Puntos</TableHead>
                         <TableHead className="text-right">Acción</TableHead>
@@ -138,6 +154,9 @@ export function ManageRewards() {
                     <TableBody>
                     {rewards.map((reward) => (
                         <TableRow key={reward.id}>
+                        <TableCell>
+                           <Image src={reward.logoUrl} alt={reward.name} width={40} height={40} className="rounded-md object-contain" />
+                        </TableCell>
                         <TableCell className="font-medium">{reward.name}</TableCell>
                         <TableCell>{reward.points.toLocaleString()}</TableCell>
                         <TableCell className="text-right">

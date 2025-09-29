@@ -22,16 +22,9 @@ import {
 type GiftCard = {
     id: string;
     name: string;
-    value: string;
     points: number;
-    logo: string;
-}
-
-const logoMap: {[key: string]: string} = {
-    "Amazon": "/gift-cards/amazon.svg",
-    "Google Play": "/gift-cards/google-play.svg",
-    "Netflix": "/gift-cards/netflix.svg",
-    "Spotify": "/gift-cards/spotify.svg",
+    logoUrl: string;
+    value?: string;
 }
 
 type RedeemSectionProps = {
@@ -53,9 +46,9 @@ export function RedeemSection({ userPoints }: RedeemSectionProps) {
                 return {
                     id: doc.id,
                     name: data.name,
-                    value: data.value || "", // value might not exist on all rewards
                     points: data.points,
-                    logo: logoMap[data.name] || "/gift-cards/default.svg"
+                    logoUrl: data.logoUrl,
+                    value: data.value || ""
                 } as GiftCard
             });
             setRewards(rewardsList);
@@ -110,7 +103,7 @@ export function RedeemSection({ userPoints }: RedeemSectionProps) {
           return (
             <Card key={card.id} className="flex flex-col">
               <CardContent className="p-4 flex-grow flex flex-col items-center justify-center">
-                <Image src={card.logo} alt={`${card.name} logo`} width={64} height={64} className="h-16 w-16 object-contain mb-2" />
+                <Image src={card.logoUrl} alt={`${card.name} logo`} width={64} height={64} className="h-16 w-16 object-contain mb-2" />
                 <p className="font-bold text-lg">{card.name}</p>
                 {card.value && <p className="text-sm text-muted-foreground">{card.value}</p>}
               </CardContent>
