@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,27 +13,35 @@ type ReferralsSectionProps = {
 
 export function ReferralsSection({ referrals, referralCode }: ReferralsSectionProps) {
     const { toast } = useToast();
+    
+    // Ensure window is defined before constructing the URL
+    const referralUrl = typeof window !== 'undefined' 
+      ? `${window.location.origin}/auth?ref=${referralCode}`
+      : '';
 
     const handleCopy = () => {
-        navigator.clipboard.writeText(referralCode);
+        if (!referralUrl) return;
+        navigator.clipboard.writeText(referralUrl);
         toast({
-            title: "Copiado",
-            description: "Tu código de referido ha sido copiado al portapapeles.",
+            title: "Enlace Copiado",
+            description: "Tu enlace de referido ha sido copiado.",
         });
     }
 
     const handleShare = () => {
+        if (!referralUrl) return;
+
         if(navigator.share) {
             navigator.share({
-                title: '¡Únete y gana recompensas!',
-                text: `Usa mi código de referido para empezar: ${referralCode}`,
-                url: window.location.href,
+                title: '¡Únete a TareaPlus y gana recompensas!',
+                text: `Usa mi código para empezar y obtén beneficios. ¡Regístrate aquí!`,
+                url: referralUrl,
             })
         } else {
             handleCopy();
             toast({
                 title: "Compartir no disponible",
-                description: "Tu navegador no soporta la función de compartir. El código ha sido copiado.",
+                description: "Tu navegador no soporta esta función. El enlace ha sido copiado.",
             });
         }
     }
@@ -52,11 +61,11 @@ export function ReferralsSection({ referrals, referralCode }: ReferralsSectionPr
       </Card>
       <Card className="bg-card/80 backdrop-blur-sm">
         <CardHeader>
-            <CardTitle className="text-lg text-center">Tu Código de Invitación</CardTitle>
+            <CardTitle className="text-lg text-center">Comparte tu Enlace</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-center p-3 border-2 border-dashed border-primary rounded-lg bg-primary/10">
-            <span className="text-2xl font-mono font-bold text-primary tracking-widest">{referralCode}</span>
+            <span className="text-lg font-mono font-bold text-primary tracking-widest break-all text-center">{referralCode}</span>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <Button onClick={handleCopy} variant="secondary" className="bg-primary/80 hover:bg-primary text-primary-foreground">
