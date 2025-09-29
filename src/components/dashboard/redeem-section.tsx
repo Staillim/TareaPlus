@@ -134,7 +134,6 @@ export function RedeemSection({ userPoints }: RedeemSectionProps) {
   if (loading) {
     return (
         <section className="space-y-6">
-          <h2 className="text-2xl font-bold font-headline text-center bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">Canjear Recompensas</h2>
           <div className="grid grid-cols-2 gap-6">
             {[...Array(4)].map((_, i) => (
                 <Card key={i} className="bg-card/80 backdrop-blur-sm flex flex-col aspect-[3/4]">
@@ -153,7 +152,6 @@ export function RedeemSection({ userPoints }: RedeemSectionProps) {
   
   return (
     <section className="space-y-6">
-      <h2 className="text-2xl font-bold font-headline text-center bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">Canjear Recompensas</h2>
       <div className="grid grid-cols-2 gap-6">
         {rewards.map((card) => {
           const canAfford = userPoints >= card.points;

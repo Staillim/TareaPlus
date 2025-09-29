@@ -65,7 +65,6 @@ export function MyRedemptionsSection({ userId }: { userId: string }) {
 
     return (
         <section className="space-y-6">
-             <h2 className="text-2xl font-bold font-headline text-center bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">Mis Canjes</h2>
             <Card className="bg-card/80 backdrop-blur-sm">
                 <CardHeader>
                     <CardTitle>Historial de Canjes</CardTitle>

@@ -9,13 +9,12 @@ import { useRouter } from "next/navigation";
 import { Header } from "@/components/dashboard/header";
 import { TasksSection } from "@/components/dashboard/tasks-section";
 import { ReferralsSection } from "@/components/dashboard/referrals-section";
-import { RedeemSection } from "@/components/dashboard/redeem-section";
 import { BottomNav } from "@/components/dashboard/bottom-nav";
-import { Home, Gift, Users, LogOut, UserCircle, History } from "lucide-react";
+import { Home, Gift, Users, LogOut, UserCircle } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter } from "@/components/ui/sidebar";
 import { ProfileSection } from "@/components/dashboard/profile-section";
-import { MyRedemptionsSection } from "@/components/dashboard/my-redemptions-section";
+import { RedemptionContainer } from "@/components/dashboard/redemption-container";
 
 export type UserData = {
   username: string;
@@ -107,7 +106,6 @@ export default function DashboardPage() {
   const navItems = [
     { id: "home", label: "Inicio", icon: Home },
     { id: "redeem", label: "Canjear", icon: Gift },
-    { id: "my-redemptions", label: "Mis Canjes", icon: History },
     { id: "referrals", label: "Referidos", icon: Users },
     { id: "profile", label: "Perfil", icon: UserCircle },
   ];
@@ -115,8 +113,7 @@ export default function DashboardPage() {
   const renderContent = () => {
     switch(activeTab) {
       case "home": return <TasksSection userId={user.uid} completedTasks={userData.completedTasks || []} />;
-      case "redeem": return <RedeemSection userPoints={userData.points} />;
-      case "my-redemptions": return <MyRedemptionsSection userId={user.uid} />;
+      case "redeem": return <RedemptionContainer user={user} userPoints={userData.points} />;
       case "referrals": return <ReferralsSection referrals={userData.referrals || 0} referralCode={userData.referralCode} />;
       case "profile": return <ProfileSection user={user} userData={userData} />;
       default: return <TasksSection userId={user.uid} completedTasks={userData.completedTasks || []} />;
