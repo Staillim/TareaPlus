@@ -2,12 +2,8 @@
   "indexes": [
     {
       "collectionGroup": "redemptions",
-      "queryScope": "COLLECTION",
+      "queryScope": "COLLECTION_GROUP",
       "fields": [
-        {
-          "fieldPath": "userId",
-          "order": "ASCENDING"
-        },
         {
           "fieldPath": "requestedAt",
           "order": "DESCENDING"
