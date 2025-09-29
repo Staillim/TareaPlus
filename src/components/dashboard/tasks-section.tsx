@@ -2,13 +2,13 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { collection, doc, writeBatch, serverTimestamp, query, getDocs as getSubDocs, collection as subCollection, increment } from "firebase/firestore";
+import { collection, doc, writeBatch, serverTimestamp, query, getDocs as getSubDocs, collection as subCollection, increment, orderBy, where } from "firebase/firestore";
 import { firestore } from "@/lib/firebase/firebase";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Globe, Instagram, Link2, Youtube, History, Loader2, PartyPopper, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { differenceInHours, addHours, differenceInSeconds } from 'date-fns';
+import { addHours, differenceInSeconds } from 'date-fns';
 import { Separator } from "../ui/separator";
 
 const iconMap: { [key: string]: React.ElementType } = {
@@ -23,7 +23,7 @@ type Task = {
   id: string;
   title: string;
   type: string;
-  url: string;
+  urls: string[]; // Changed from url: string
   points: number;
   duration?: number;
   repeatable?: boolean;
@@ -32,6 +32,7 @@ type Task = {
 };
 
 type CompletedTaskHistory = {
+  id: string;
   taskId: string;
   completedAt: {
     toDate: () => Date;
@@ -84,7 +85,7 @@ export function TasksSection({ userId }: TasksSectionProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [taskStatuses, setTaskStatuses] = useState<TaskStatus>({});
-  const [completedTasks, setCompletedTasks] = useState<Map<string, Date>>(new Map());
+  const [completedTasksHistory, setCompletedTasksHistory] = useState<CompletedTaskHistory[]>([]);
   const { toast } = useToast();
   
   const [activeTimer, setActiveTimer] = useState<TaskTimer | null>(null);
@@ -97,18 +98,11 @@ export function TasksSection({ userId }: TasksSectionProps) {
       setTasks(tasksList.filter(task => task.status === 'active'));
 
       const historyCollection = subCollection(firestore, 'users', userId, 'completedTasksHistory');
-      const historyQuery = query(historyCollection);
+      const historyQuery = query(historyCollection, orderBy('completedAt', 'desc'));
       const historySnapshot = await getSubDocs(historyQuery);
       
-      const historyMap = new Map<string, Date>();
-      historySnapshot.docs.forEach(doc => {
-          const data = doc.data() as CompletedTaskHistory;
-          // Store only the most recent completion for each task
-          if (!historyMap.has(data.taskId) || historyMap.get(data.taskId)! < data.completedAt.toDate()) {
-              historyMap.set(data.taskId, data.completedAt.toDate());
-          }
-      });
-      setCompletedTasks(historyMap);
+      const historyData = historySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CompletedTaskHistory));
+      setCompletedTasksHistory(historyData);
 
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -155,14 +149,16 @@ export function TasksSection({ userId }: TasksSectionProps) {
   }, [handleVisibilityChange]);
 
   const startTask = (task: Task) => {
-    window.open(task.url, '_blank', 'noopener,noreferrer');
+    const completions = completedTasksHistory.filter(h => h.taskId === task.id).length;
+    const urlIndex = completions % task.urls.length;
+    const urlToOpen = task.urls[urlIndex];
+
+    window.open(urlToOpen, '_blank', 'noopener,noreferrer');
 
     if (task.duration && task.duration > 0) {
-        // Task with timer
         setTaskStatuses(prev => ({ ...prev, [task.id]: 'timing' }));
         setActiveTimer({ startTime: Date.now(), task });
     } else {
-        // Instant task (no duration) -> go straight to claiming
         setTaskStatuses(prev => ({ ...prev, [task.id]: 'ready_to_claim' }));
         claimReward(task);
     }
@@ -171,7 +167,6 @@ export function TasksSection({ userId }: TasksSectionProps) {
   const claimReward = async (task: Task) => {
     setTaskStatuses(prev => ({ ...prev, [task.id]: 'claiming' }));
     try {
-      const now = new Date();
       const completionTimestamp = serverTimestamp();
 
       const batch = writeBatch(firestore);
@@ -195,7 +190,13 @@ export function TasksSection({ userId }: TasksSectionProps) {
 
       await batch.commit();
       
-      setCompletedTasks(prev => new Map(prev).set(task.id, now));
+      // Manually add to local history to trigger re-render and availability check
+      const newHistoryItem: CompletedTaskHistory = {
+          id: historyRef.id, // temp id
+          taskId: task.id,
+          completedAt: { toDate: () => new Date() }
+      };
+      setCompletedTasksHistory(prev => [newHistoryItem, ...prev]);
 
       toast({
         title: "¡Recompensa Reclamada!",
@@ -233,7 +234,8 @@ export function TasksSection({ userId }: TasksSectionProps) {
   }
 
   const getTaskAvailability = (task: Task) => {
-    const lastCompletion = completedTasks.get(task.id);
+    const lastCompletion = completedTasksHistory.find(h => h.taskId === task.id);
+
     if (!lastCompletion) {
         return { available: true, nextAvailableDate: null };
     }
@@ -241,7 +243,7 @@ export function TasksSection({ userId }: TasksSectionProps) {
         return { available: false, nextAvailableDate: null };
     }
     
-    const nextAvailableDate = addHours(lastCompletion, task.repeatIntervalHours);
+    const nextAvailableDate = addHours(lastCompletion.completedAt.toDate(), task.repeatIntervalHours);
     const isAvailable = new Date() >= nextAvailableDate;
     
     return { available: isAvailable, nextAvailableDate: isAvailable ? null : nextAvailableDate };
@@ -315,5 +317,3 @@ export function TasksSection({ userId }: TasksSectionProps) {
     </section>
   );
 }
-
-    

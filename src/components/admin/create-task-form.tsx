@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useToast } from "@/hooks/use-toast";
@@ -10,7 +10,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
+import { Loader2, PlusCircle, Trash2 } from "lucide-react";
 import { useTransition } from "react";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { firestore } from "@/lib/firebase/firebase";
@@ -20,7 +20,11 @@ import { Label } from "../ui/label";
 const taskSchema = z.object({
   title: z.string().min(5, { message: "El título debe tener al menos 5 caracteres." }),
   type: z.enum(["visit", "follow", "shortener", "video"]),
-  url: z.string().url({ message: "Por favor, introduce una URL válida." }),
+  urls: z.array(
+    z.object({
+      value: z.string().url({ message: "Por favor, introduce una URL válida." })
+    })
+  ).min(1, "Debes añadir al menos una URL."),
   duration: z.coerce.number().optional(),
   points: z.coerce.number().min(1, { message: "Los puntos deben ser al menos 1." }),
   repeatable: z.boolean().default(false),
@@ -35,10 +39,15 @@ export function CreateTaskForm() {
     resolver: zodResolver(taskSchema),
     defaultValues: {
       title: "",
-      url: "",
+      urls: [{ value: "" }],
       points: 100,
       repeatable: false,
     },
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "urls"
   });
 
   const taskType = form.watch("type");
@@ -47,12 +56,15 @@ export function CreateTaskForm() {
   async function onSubmit(values: z.infer<typeof taskSchema>) {
     startTransition(async () => {
       try {
-        await addDoc(collection(firestore, "tasks"), {
+        const taskData = {
           ...values,
+          urls: values.urls.map(url => url.value), // Convert to array of strings
           completions: 0,
           status: 'active',
           createdAt: serverTimestamp(),
-        });
+        };
+
+        await addDoc(collection(firestore, "tasks"), taskData);
 
         toast({
           title: "Tarea Publicada",
@@ -61,6 +73,7 @@ export function CreateTaskForm() {
         form.reset();
         form.setValue('points', 100);
         form.setValue('repeatable', false);
+        form.setValue('urls', [{ value: '' }]);
       } catch (error) {
         console.error("Error creating task: ", error);
         toast({
@@ -117,22 +130,48 @@ export function CreateTaskForm() {
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="url"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>URL de la Tarea</FormLabel>
-                  <FormControl>
-                    <Input placeholder="https://ejemplo.com/pagina-a-visitar" {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    El enlace que los usuarios deben visitar para completar la tarea.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            
+            <div>
+              <Label>URLs de la Tarea</Label>
+              <FormDescription className="mb-2">
+                Añade uno o más enlaces. Si la tarea es repetible, los usuarios rotarán por estos enlaces.
+              </FormDescription>
+              <div className="space-y-2">
+                {fields.map((field, index) => (
+                  <FormField
+                    key={field.id}
+                    control={form.control}
+                    name={`urls.${index}.value`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <div className="flex items-center gap-2">
+                          <FormControl>
+                             <Input placeholder="https://ejemplo.com/pagina-a-visitar" {...field} />
+                          </FormControl>
+                          {fields.length > 1 && (
+                            <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                ))}
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-2"
+                onClick={() => append({ value: "" })}
+              >
+                <PlusCircle className="mr-2 h-4 w-4"/>
+                Añadir URL
+              </Button>
+            </div>
+
             {(taskType === "visit" || taskType === "video") && (
               <FormField
                 control={form.control}
