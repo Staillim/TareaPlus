@@ -80,7 +80,7 @@ export function RedeemSection({ userPoints }: RedeemSectionProps) {
             {[...Array(4)].map((_, i) => (
                 <Card key={i} className="bg-card/80 backdrop-blur-sm flex flex-col">
                     <CardContent className="p-4 flex-grow flex flex-col items-center justify-center space-y-2">
-                        <div className="h-16 w-16 bg-muted/50 rounded-lg animate-pulse" />
+                        <div className="h-24 w-full bg-muted/50 rounded-lg animate-pulse" />
                         <div className="h-5 w-24 bg-muted/50 rounded animate-pulse" />
                         <div className="h-4 w-16 bg-muted/50 rounded animate-pulse" />
                     </CardContent>
@@ -107,10 +107,14 @@ export function RedeemSection({ userPoints }: RedeemSectionProps) {
                <div className="particles-container">
                 {[...Array(15)].map((_, i) => <div key={i} className="particle"></div>)}
               </div>
-              <CardContent className="p-4 flex-grow flex flex-col items-center justify-center text-center">
-                <Image src={getGoogleDriveImageUrl(card.logoUrl)} alt={`${card.name} logo`} width={64} height={64} className="h-16 w-16 object-contain mb-2 drop-shadow-lg" />
-                <p className="font-bold text-lg text-white">{card.name}</p>
-                {card.value && <p className="text-sm text-white/80">{card.value}</p>}
+              <CardContent className="p-4 flex-grow flex flex-col items-center justify-between text-center">
+                <div className="relative w-full h-24 mb-4">
+                  <Image src={getGoogleDriveImageUrl(card.logoUrl)} alt={`${card.name} logo`} layout="fill" className="object-contain drop-shadow-lg" />
+                </div>
+                <div className='text-center'>
+                  <p className="font-bold text-lg text-white">{card.name}</p>
+                  {card.value && <p className="text-sm text-white/80">{card.value}</p>}
+                </div>
               </CardContent>
               <CardFooter className="p-2 mt-auto border-t border-white/10">
                 <AlertDialog>
