@@ -11,9 +11,10 @@ import { TasksSection } from "@/components/dashboard/tasks-section";
 import { ReferralsSection } from "@/components/dashboard/referrals-section";
 import { RedeemSection } from "@/components/dashboard/redeem-section";
 import { BottomNav } from "@/components/dashboard/bottom-nav";
-import { Home, Gift, Users, LogOut } from "lucide-react";
+import { Home, Gift, Users, LogOut, UserCircle } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter } from "@/components/ui/sidebar";
+import { ProfileSection } from "@/components/dashboard/profile-section";
 
 export type UserData = {
   username: string;
@@ -106,6 +107,7 @@ export default function DashboardPage() {
     { id: "home", label: "Inicio", icon: Home },
     { id: "redeem", label: "Canjear", icon: Gift },
     { id: "referrals", label: "Referidos", icon: Users },
+    { id: "profile", label: "Perfil", icon: UserCircle },
   ];
 
   const renderContent = () => {
@@ -113,6 +115,7 @@ export default function DashboardPage() {
       case "home": return <TasksSection userId={user.uid} completedTasks={userData.completedTasks || []} />;
       case "redeem": return <RedeemSection userPoints={userData.points} />;
       case "referrals": return <ReferralsSection referrals={userData.referrals || 0} referralCode={userData.referralCode} />;
+      case "profile": return <ProfileSection user={user} userData={userData} />;
       default: return <TasksSection userId={user.uid} completedTasks={userData.completedTasks || []} />;
     }
   }
