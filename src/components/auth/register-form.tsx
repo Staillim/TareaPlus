@@ -25,6 +25,9 @@ import { Separator } from "@/components/ui/separator";
 
 const formSchema = z
   .object({
+    username: z.string().min(3, {
+      message: "El nombre de usuario debe tener al menos 3 caracteres.",
+    }),
     email: z.string().email({
       message: "Por favor, introduce una dirección de correo electrónico válida.",
     }),
@@ -45,6 +48,7 @@ export function RegisterForm() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      username: "",
       email: "",
       password: "",
       confirmPassword: "",
@@ -61,6 +65,7 @@ export function RegisterForm() {
         await setDoc(doc(firestore, "users", user.uid), {
           uid: user.uid,
           email: user.email,
+          username: values.username,
           createdAt: new Date(),
         });
         
@@ -87,6 +92,19 @@ export function RegisterForm() {
     <div className="space-y-6 pt-6">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+           <FormField
+            control={form.control}
+            name="username"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Nombre de Usuario</FormLabel>
+                <FormControl>
+                  <Input placeholder="tu-usuario" {...field} disabled={isPending} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
           <FormField
             control={form.control}
             name="email"
