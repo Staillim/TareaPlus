@@ -6,17 +6,6 @@ import { collection, onSnapshot } from "firebase/firestore";
 import { firestore } from "@/lib/firebase/firebase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Award, ListChecks, DollarSign, Loader2 } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-
-const dailyActivityData = [
-  { name: 'Lun', users: 30, tasks: 50 },
-  { name: 'Mar', users: 45, tasks: 60 },
-  { name: 'Mié', users: 60, tasks: 90 },
-  { name: 'Jue', users: 50, tasks: 75 },
-  { name: 'Vie', users: 70, tasks: 110 },
-  { name: 'Sáb', users: 90, tasks: 130 },
-  { name: 'Dom', users: 85, tasks: 120 },
-];
 
 export function StatsCards() {
   const [stats, setStats] = useState({
@@ -98,24 +87,6 @@ export function StatsCards() {
           </CardContent>
         </Card>
       </div>
-      <Card>
-        <CardHeader>
-            <CardTitle>Actividad de la Semana</CardTitle>
-        </CardHeader>
-        <CardContent>
-            <ResponsiveContainer width="100%" height={350}>
-            <BarChart data={dailyActivityData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="users" fill="hsl(var(--primary))" name="Nuevos Usuarios" />
-                <Bar dataKey="tasks" fill="hsl(var(--secondary))" name="Tareas Completadas" />
-            </BarChart>
-            </ResponsiveContainer>
-        </CardContent>
-      </Card>
     </section>
   );
 }
