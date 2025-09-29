@@ -9,13 +9,15 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Loader2, Edit } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Loader2, Edit, LogOut } from "lucide-react";
 import { useTransition } from "react";
 import { doc, updateDoc } from "firebase/firestore";
-import { firestore } from "@/lib/firebase/firebase";
+import { firestore, auth } from "@/lib/firebase/firebase";
 import { UserData } from "@/app/dashboard/page";
 import { PointsHistory } from "./points-history";
+import { useRouter } from "next/navigation";
+import { Separator } from "../ui/separator";
 
 const profileSchema = z.object({
   username: z.string().min(3, { message: "El nombre de usuario debe tener al menos 3 caracteres." }).max(20, { message: "El nombre de usuario no puede tener más de 20 caracteres." }),
@@ -29,6 +31,7 @@ type ProfileSectionProps = {
 export function ProfileSection({ user, userData }: ProfileSectionProps) {
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
+  const router = useRouter();
 
   const form = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
@@ -68,6 +71,11 @@ export function ProfileSection({ user, userData }: ProfileSectionProps) {
     });
   }
 
+  const handleLogout = async () => {
+    await auth.signOut();
+    router.push("/");
+  };
+
   return (
     <section className="space-y-6">
       <h2 className="text-2xl font-bold font-headline text-center bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">Mi Perfil</h2>
@@ -90,7 +98,7 @@ export function ProfileSection({ user, userData }: ProfileSectionProps) {
                         <FormControl>
                             <Input placeholder="Tu nombre de usuario" {...field} disabled={isPending} />
                         </FormControl>
-                        <Button type="submit" disabled={isPending}>
+                        <Button type="submit" size="icon" disabled={isPending}>
                             {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Edit className="h-4 w-4" />}
                             <span className="sr-only">Cambiar nombre</span>
                         </Button>
@@ -108,6 +116,13 @@ export function ProfileSection({ user, userData }: ProfileSectionProps) {
            </div>
 
         </CardContent>
+        <CardFooter className="flex-col items-stretch gap-4">
+            <Separator />
+            <Button variant="destructive" onClick={handleLogout} className="w-full">
+                <LogOut className="mr-2 h-4 w-4" />
+                Cerrar Sesión
+            </Button>
+        </CardFooter>
       </Card>
 
       <PointsHistory userId={user.uid} />
