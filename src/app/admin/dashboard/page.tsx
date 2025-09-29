@@ -7,21 +7,22 @@ import { doc, getDoc } from "firebase/firestore";
 import { auth, firestore } from "@/lib/firebase/firebase";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
+import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter, SidebarTrigger } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LayoutDashboard, Settings, PlusCircle, List, Gift, LogOut, Users } from "lucide-react";
+import { LayoutDashboard, Settings, PlusCircle, List, Gift, LogOut, Users, TicketCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatsCards } from "@/components/admin/stats-cards";
 import { CreateTaskForm } from "@/components/admin/create-task-form";
 import { ManageTasksTable } from "@/components/admin/manage-tasks-table";
 import { ManageRewards } from "@/components/admin/manage-rewards";
 import { ManageUsersTable } from "@/components/admin/manage-users-table";
+import { ManageRedemptions } from "@/components/admin/manage-redemptions";
 
 type AdminData = {
   username: string;
 };
 
-type View = 'dashboard' | 'create-task' | 'manage-tasks' | 'manage-rewards' | 'manage-users';
+type View = 'dashboard' | 'create-task' | 'manage-tasks' | 'manage-rewards' | 'manage-users' | 'manage-redemptions';
 
 export default function AdminDashboardPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -43,11 +44,9 @@ export default function AdminDashboardPage() {
           });
           setLoading(false);
         } else {
-          // Not an admin or document doesn't exist, redirect
           router.push("/dashboard");
         }
       } else {
-        // Not logged in
         router.push("/");
       }
     });
@@ -80,6 +79,8 @@ export default function AdminDashboardPage() {
         return <ManageRewards />;
       case 'manage-users':
         return <ManageUsersTable />;
+      case 'manage-redemptions':
+        return <ManageRedemptions />;
       default:
         return <StatsCards />;
     }
@@ -133,6 +134,12 @@ export default function AdminDashboardPage() {
                             <span>Recompensas</span>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
+                    <SidebarMenuItem>
+                        <SidebarMenuButton onClick={() => setActiveView('manage-redemptions')} isActive={activeView === 'manage-redemptions'} tooltip="Gestionar Canjes">
+                            <TicketCheck />
+                            <span>Canjes</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
                 </SidebarMenu>
             </SidebarContent>
             <SidebarFooter>
@@ -163,3 +170,5 @@ export default function AdminDashboardPage() {
     </SidebarProvider>
   );
 }
+
+    
