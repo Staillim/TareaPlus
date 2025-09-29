@@ -23,7 +23,7 @@ export function AuthForm() {
             <CardHeader className="text-center">
               <CardTitle className="font-headline text-2xl flex items-center justify-center gap-2">
                 <Lock className="h-6 w-6 text-primary" />
-                Acceso a la Plataforma
+                TareaPlus
               </CardTitle>
               <CardDescription>
                 Inicia sesión o crea una cuenta para empezar a ganar.

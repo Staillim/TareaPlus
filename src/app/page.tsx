@@ -71,7 +71,7 @@ export default function LandingPage() {
 
       <footer className="py-6 bg-card text-card-foreground">
         <div className="container px-4 md:px-6 flex items-center justify-center">
-            <p className="text-sm text-muted-foreground">&copy; 2024 Acceso Seguro. Todos los derechos reservados.</p>
+            <p className="text-sm text-muted-foreground">&copy; 2024 TareaPlus. Todos los derechos reservados.</p>
         </div>
       </footer>
     </main>
