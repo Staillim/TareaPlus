@@ -67,6 +67,7 @@ export function RegisterForm() {
           email: user.email,
           username: values.username,
           createdAt: new Date(),
+          role: 'user',
         });
         
         toast({
