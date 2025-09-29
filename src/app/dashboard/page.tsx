@@ -119,7 +119,7 @@ export default function DashboardPage() {
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen bg-background text-foreground">
+      <div className="flex flex-1 min-h-screen bg-background text-foreground">
         <Sidebar collapsible="icon" className="hidden md:flex bg-sidebar/80 backdrop-blur-xl border-r border-border/20">
           <SidebarContent>
             <SidebarMenu>
