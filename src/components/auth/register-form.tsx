@@ -8,8 +8,8 @@ import { auth, firestore } from "@/lib/firebase/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { useTransition } from "react";
 import { Loader2 } from "lucide-react";
-import { doc, setDoc } from "firebase/firestore";
-import { useRouter } from "next/navigation";
+import { doc, setDoc, getDocs, collection, query, where, writeBatch } from "firebase/firestore";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { GoogleButton } from "@/components/auth/google-button";
 import { Separator } from "@/components/ui/separator";
+import { useEffect } from "react";
 
 const formSchema = z
   .object({
@@ -36,6 +37,7 @@ const formSchema = z
       message: "La contraseña debe tener al menos 8 caracteres.",
     }),
     confirmPassword: z.string(),
+    referralCode: z.string().optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Las contraseñas no coinciden.",
@@ -52,10 +54,24 @@ const generateReferralCode = () => {
     return code;
 };
 
+async function isReferralCodeValid(code: string): Promise<{valid: boolean, referrerId: string | null}> {
+    if (!code) return {valid: false, referrerId: null};
+    const usersRef = collection(firestore, "users");
+    const q = query(usersRef, where("referralCode", "==", code));
+    const querySnapshot = await getDocs(q);
+    if (querySnapshot.empty) {
+        return {valid: false, referrerId: null};
+    }
+    const referrerDoc = querySnapshot.docs[0];
+    return {valid: true, referrerId: referrerDoc.id};
+}
+
 export function RegisterForm() {
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const refCode = searchParams.get('ref');
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -64,27 +80,61 @@ export function RegisterForm() {
       email: "",
       password: "",
       confirmPassword: "",
+      referralCode: refCode || "",
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  useEffect(() => {
+    if (refCode) {
+      form.setValue('referralCode', refCode);
+    }
+  }, [refCode, form]);
+
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     startTransition(async () => {
       try {
+        let referrerId: string | null = null;
+        if (values.referralCode) {
+            const referralCheck = await isReferralCodeValid(values.referralCode);
+            if (!referralCheck.valid) {
+                toast({
+                    variant: "destructive",
+                    title: "Código Inválido",
+                    description: "El código de referido que introdujiste no es válido.",
+                });
+                return;
+            }
+            referrerId = referralCheck.referrerId;
+        }
+
         const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
         const user = userCredential.user;
+        
+        const batch = writeBatch(firestore);
 
-        // Create a user document in Firestore
-        await setDoc(doc(firestore, "users", user.uid), {
-          uid: user.uid,
-          email: user.email,
-          username: values.username,
-          createdAt: new Date(),
-          role: 'user',
-          points: 0,
-          referrals: 0,
-          referralCode: generateReferralCode(),
-          completedTasks: []
+        const newUserRef = doc(firestore, "users", user.uid);
+        batch.set(newUserRef, {
+            uid: user.uid,
+            email: user.email,
+            username: values.username,
+            createdAt: new Date(),
+            role: 'user',
+            points: 0,
+            referrals: 0,
+            referralCode: generateReferralCode(),
+            completedTasks: []
         });
+
+        if (referrerId) {
+            const referralRef = doc(collection(firestore, "referrals"));
+            batch.set(referralRef, {
+                referrerId: referrerId,
+                referredId: user.uid,
+                createdAt: new Date()
+            });
+        }
+
+        await batch.commit();
         
         toast({
           title: "¡Cuenta creada!",
@@ -156,6 +206,19 @@ export function RegisterForm() {
                 <FormLabel>Confirmar Contraseña</FormLabel>
                 <FormControl>
                   <Input type="password" placeholder="••••••••" {...field} disabled={isPending}/>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="referralCode"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Código de Referido (Opcional)</FormLabel>
+                <FormControl>
+                  <Input placeholder="CÓDIGO123" {...field} disabled={isPending} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

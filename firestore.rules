@@ -1,43 +1,45 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    function isAuth() {
-      return request.auth != null;
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
     }
-    
+
     function isAdmin() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     match /users/{userId} {
-      // Allow users to create their own document on signup
-      allow create: if isAuth() && request.resource.id == request.auth.uid;
-      // Allow users to read their own document
-      allow read, update, delete: if isAuth() && request.auth.uid == userId;
-      // Allow admins to read/write any user document
-      allow read, write: if isAdmin();
-      
-      // Allow admins to read completion history
-      match /completedTasksHistory/{historyId} {
-        allow read, write: if isAdmin() || request.auth.uid == userId;
-      }
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if isOwner(userId);
+      // Allow unauthenticated reads only for the referralCode field for validation
+      allow get: if request.auth == null && resource.data.keys().hasAll(['referralCode']);
     }
-    
+
     match /tasks/{taskId} {
-    	// Allow admins to do anything with tasks
-    	allow read, write: if isAdmin();
-      // Allow authenticated users to read tasks
-      allow read: if isAuth();
+        allow read: if request.auth != null;
+        allow create, update, delete: if isAdmin();
+    }
+
+    match /rewards/{rewardId} {
+        allow read: if request.auth != null;
+        allow create, update, delete: if isAdmin();
     }
     
-    match /rewards/{rewardId} {
-    	// Allow admins to do anything with rewards
-    	allow read, write: if isAdmin();
-      // Allow authenticated users to read rewards
-      allow read: if isAuth();
+    match /users/{userId}/completedTasksHistory/{historyId} {
+        allow create: if isOwner(userId);
+    }
+    
+    match /referrals/{referralId} {
+        allow read: if request.auth != null;
+        allow create: if request.auth != null; // A user is creating a referral link to themselves
+    }
+
+    // Rule to allow querying the users collection by referralCode
+    match /users/{userId} {
+      allow list: if request.auth == null && request.query.keys().hasOnly(['where']) && request.query.where[0] == ['referralCode', '==', request.query.where[2]];
     }
   }
 }

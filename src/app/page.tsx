@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase/firebase';
 import { AuthForm } from '@/components/auth/auth-form';
 import { Loader2 } from 'lucide-react';
 
-export default function Home() {
+function AuthPageContent() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
 
@@ -34,5 +34,17 @@ export default function Home() {
     <main className="flex min-h-screen w-full items-center justify-center p-4">
       <AuthForm />
     </main>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={
+      <main className="flex min-h-screen w-full items-center justify-center p-4">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </main>
+    }>
+      <AuthPageContent />
+    </Suspense>
   );
 }

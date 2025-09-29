@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { onAuthStateChanged, User } from "firebase/auth";
-import { doc, onSnapshot } from "firebase/firestore";
+import { doc, onSnapshot, collection, query, where } from "firebase/firestore";
 import { auth, firestore } from "@/lib/firebase/firebase";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/dashboard/header";
@@ -33,16 +33,18 @@ export default function DashboardPage() {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
-        const userDocRef = doc(firestore, "users", currentUser.uid);
         
-        const unsubscribeSnapshot = onSnapshot(userDocRef, (doc) => {
+        // Listen to user document
+        const userDocRef = doc(firestore, "users", currentUser.uid);
+        const unsubscribeUser = onSnapshot(userDocRef, (doc) => {
           if (doc.exists()) {
-            const data = doc.data() as UserData;
+            const data = doc.data() as Omit<UserData, 'referrals'>;
             if (data.role === 'admin') {
               router.push('/admin/dashboard');
-              return;
+              return; // Stop further processing for admins
             }
-            setUserData(data);
+             // We will update referrals separately
+            setUserData(prevData => ({ ...prevData, ...data } as UserData));
           } else {
              router.push("/");
           }
@@ -53,7 +55,17 @@ export default function DashboardPage() {
             router.push("/");
         });
 
-        return () => unsubscribeSnapshot();
+        // Listen to referrals collection
+        const referralsRef = collection(firestore, "referrals");
+        const q = query(referralsRef, where("referrerId", "==", currentUser.uid));
+        const unsubscribeReferrals = onSnapshot(q, (snapshot) => {
+            setUserData(prevData => ({ ...prevData, referrals: snapshot.size } as UserData));
+        });
+
+        return () => {
+          unsubscribeUser();
+          unsubscribeReferrals();
+        }
       } else {
         router.push("/");
       }
@@ -86,9 +98,9 @@ export default function DashboardPage() {
       <Header username={userData.username} points={userData.points} onLogout={handleLogout} />
       
       <main className="flex-grow overflow-y-auto p-4 md:p-6 pb-24">
-        {activeTab === "home" && <TasksSection userId={user.uid} completedTasks={userData.completedTasks} />}
+        {activeTab === "home" && <TasksSection userId={user.uid} completedTasks={userData.completedTasks || []} />}
         {activeTab === "redeem" && <RedeemSection userPoints={userData.points} />}
-        {activeTab === "referrals" && <ReferralsSection referrals={userData.referrals} referralCode={userData.referralCode} />}
+        {activeTab === "referrals" && <ReferralsSection referrals={userData.referrals || 0} referralCode={userData.referralCode} />}
       </main>
 
       <BottomNav items={navItems} activeTab={activeTab} onTabChange={setActiveTab} />

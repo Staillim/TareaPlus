@@ -2,10 +2,10 @@
 
 import { signInWithPopup, getAdditionalUserInfo } from "firebase/auth";
 import { auth, googleProvider, firestore } from "@/lib/firebase/firebase";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { doc, setDoc, getDocs, collection, query, where, writeBatch } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg
@@ -29,19 +29,34 @@ const generateReferralCode = () => {
     return code;
 };
 
+async function isReferralCodeValid(code: string): Promise<{valid: boolean, referrerId: string | null}> {
+  if (!code) return {valid: false, referrerId: null};
+  const usersRef = collection(firestore, "users");
+  const q = query(usersRef, where("referralCode", "==", code));
+  const querySnapshot = await getDocs(q);
+  if (querySnapshot.empty) {
+      return {valid: false, referrerId: null};
+  }
+  const referrerDoc = querySnapshot.docs[0];
+  return {valid: true, referrerId: referrerDoc.id};
+}
 
 export function GoogleButton() {
   const { toast } = useToast();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const handleGoogleSignIn = async () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
       const additionalInfo = getAdditionalUserInfo(result);
+      
+      const batch = writeBatch(firestore);
 
       if (additionalInfo?.isNewUser) {
-        await setDoc(doc(firestore, "users", user.uid), {
+        const newUserRef = doc(firestore, "users", user.uid);
+        batch.set(newUserRef, {
             uid: user.uid,
             email: user.email,
             username: user.displayName || user.email?.split('@')[0],
@@ -51,7 +66,27 @@ export function GoogleButton() {
             referrals: 0,
             referralCode: generateReferralCode(),
             completedTasks: []
-          });
+        });
+
+        const refCode = searchParams.get('ref');
+        if (refCode) {
+            const referralCheck = await isReferralCodeValid(refCode);
+            if (referralCheck.valid && referralCheck.referrerId) {
+                const referralRef = doc(collection(firestore, "referrals"));
+                batch.set(referralRef, {
+                    referrerId: referralCheck.referrerId,
+                    referredId: user.uid,
+                    createdAt: new Date()
+                });
+            } else {
+                 toast({
+                    variant: "destructive",
+                    title: "Código Inválido",
+                    description: "El código de referido del enlace no es válido.",
+                });
+            }
+        }
+        await batch.commit();
         toast({
           title: "¡Cuenta creada con Google!",
           description: "Hemos creado tu cuenta exitosamente.",
