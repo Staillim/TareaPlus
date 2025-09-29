@@ -11,8 +11,10 @@ import { TasksSection } from "@/components/dashboard/tasks-section";
 import { ReferralsSection } from "@/components/dashboard/referrals-section";
 import { RedeemSection } from "@/components/dashboard/redeem-section";
 import { BottomNav } from "@/components/dashboard/bottom-nav";
-import { Home, Gift, Users } from "lucide-react";
+import { Home, Gift, Users, LogOut } from "lucide-react";
 import { Loader2 } from "lucide-react";
+import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter, SidebarTrigger } from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
 
 export type UserData = {
   username: string;
@@ -56,7 +58,7 @@ export default function DashboardPage() {
             if (!data.referralCode) {
                 const newReferralCode = generateReferralCode();
                 await updateDoc(userDocRef, { referralCode: newReferralCode });
-                data.referralCode = newReferralCode;
+                setUserData(prev => ({ ...prev, referralCode: newReferralCode } as UserData));
             }
 
             setUserData(prevData => ({ ...prevData, ...data } as UserData));
@@ -107,18 +109,55 @@ export default function DashboardPage() {
     { id: "referrals", label: "Referidos", icon: Users },
   ];
 
-  return (
-    <div className="flex flex-col min-h-screen text-foreground font-body">
-      <Header username={userData.username} points={userData.points} onLogout={handleLogout} />
-      
-      <main className="flex-grow overflow-y-auto p-4 md:p-6 pb-24">
-        {activeTab === "home" && <TasksSection userId={user.uid} completedTasks={userData.completedTasks || []} />}
-        {activeTab === "redeem" && <RedeemSection userPoints={userData.points} />}
-        {activeTab === "referrals" && <ReferralsSection referrals={userData.referrals || 0} referralCode={userData.referralCode} />}
-      </main>
+  const renderContent = () => {
+    switch(activeTab) {
+      case "home": return <TasksSection userId={user.uid} completedTasks={userData.completedTasks || []} />;
+      case "redeem": return <RedeemSection userPoints={userData.points} />;
+      case "referrals": return <ReferralsSection referrals={userData.referrals || 0} referralCode={userData.referralCode} />;
+      default: return <TasksSection userId={user.uid} completedTasks={userData.completedTasks || []} />;
+    }
+  }
 
-      <BottomNav items={navItems} activeTab={activeTab} onTabChange={setActiveTab} />
-    </div>
+  return (
+    <SidebarProvider>
+      <div className="flex min-h-screen bg-background text-foreground font-body">
+        <Sidebar collapsible="icon" className="hidden md:flex">
+          <SidebarContent>
+            <SidebarMenu>
+              {navItems.map((item) => (
+                <SidebarMenuItem key={item.id}>
+                  <SidebarMenuButton onClick={() => setActiveTab(item.id)} isActive={activeTab === item.id} tooltip={item.label}>
+                    <item.icon />
+                    <span>{item.label}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarContent>
+          <SidebarFooter>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={handleLogout} tooltip="Cerrar Sesión">
+                  <LogOut />
+                  <span>Cerrar Sesión</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarFooter>
+        </Sidebar>
+        
+        <div className="flex-1 flex flex-col">
+          <Header username={userData.username} points={userData.points} onLogout={handleLogout}>
+             <SidebarTrigger className="md:hidden ml-2" />
+          </Header>
+          
+          <main className="flex-grow overflow-y-auto p-4 md:p-6 pb-24 md:pb-6">
+            {renderContent()}
+          </main>
+        </div>
+
+        <BottomNav items={navItems} activeTab={activeTab} onTabChange={setActiveTab} />
+      </div>
+    </SidebarProvider>
   );
 }
-
