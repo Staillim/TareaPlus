@@ -4,10 +4,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/lib/firebase/firebase";
+import { auth, firestore } from "@/lib/firebase/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { useTransition } from "react";
 import { Loader2 } from "lucide-react";
+import { doc, setDoc } from "firebase/firestore";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -53,7 +54,16 @@ export function RegisterForm() {
   function onSubmit(values: z.infer<typeof formSchema>) {
     startTransition(async () => {
       try {
-        await createUserWithEmailAndPassword(auth, values.email, values.password);
+        const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+        const user = userCredential.user;
+
+        // Create a user document in Firestore
+        await setDoc(doc(firestore, "users", user.uid), {
+          uid: user.uid,
+          email: user.email,
+          createdAt: new Date(),
+        });
+        
         toast({
           title: "¡Cuenta creada!",
           description: "Hemos creado tu cuenta exitosamente.",
