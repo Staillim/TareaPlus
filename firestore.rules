@@ -2,43 +2,78 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
+  
+    // Helper function to check for admin role
     function isAdmin() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
+    // Users collection
     match /users/{userId} {
-      allow read, write: if isAdmin();
-      allow create: if request.auth.uid == userId;
-      allow get, update: if request.auth.uid == userId;
+      // A user can create their own document upon registration
+      allow create: if request.auth != null && request.auth.uid == userId;
       
+      // A user can read their own data. Admins can read any user's data.
+      allow get: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      
+      // A user can update their own username. Admins can update any user's data (e.g. points).
+      allow update: if request.auth != null && 
+                      (request.auth.uid == userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['username'])) ||
+                      isAdmin();
+                      
+      // Users should not be able to delete their accounts through the app directly
+      allow delete: if false;
+
+      // Subcollection for completed tasks history
       match /completedTasksHistory/{historyId} {
-        allow read, write: if request.auth.uid == userId || isAdmin();
+        // User can read and write to their own history
+        allow read, write: if request.auth != null && request.auth.uid == userId;
       }
-
+      
+      // Subcollection for redemption requests
       match /redemptions/{redemptionId} {
-        allow read, create, update: if request.auth.uid == userId;
-        allow list: if request.auth.uid == userId;
+        // User can create and read their own redemption requests
+        allow create, get: if request.auth != null && request.auth.uid == userId;
+        
+        // Admins can update the status of any redemption
+        allow update: if isAdmin();
+        
+        // No one can delete redemption records for history purposes
+        allow delete: if false;
       }
     }
 
+    // Tasks collection
     match /tasks/{taskId} {
-      allow read, write: if isAdmin();
-      allow get, list: if request.auth != null;
-    }
-
-    match /rewards/{rewardId} {
-       allow read, write: if isAdmin();
-       allow get, list: if request.auth != null;
-    }
-
-    match /referrals/{referralId} {
-      allow read: if request.auth != null && resource.data.referrerId == request.auth.uid;
-      allow create: if request.auth != null;
+      // Any authenticated user can read tasks
+      allow get: if request.auth != null;
+      
+      // Only admins can create, update or delete tasks
+      allow create, update, delete: if isAdmin();
     }
     
+    // Rewards collection
+    match /rewards/{rewardId} {
+        // Any authenticated user can see the available rewards
+        allow get: if request.auth != null;
+        
+        // Only admins can create, update or delete rewards
+        allow create, update, delete: if isAdmin();
+    }
+
+    // Collection group for redemptions to allow admins to query across all users
     match /{path=**}/redemptions/{redemptionId} {
-      allow read, write: if isAdmin();
+      // Admins can list redemptions from all users
+      allow list: if isAdmin();
+    }
+
+    // Referrals collection
+    match /referrals/{referralId} {
+        // Only admins or involved users can access referral data.
+        allow get: if request.auth != null && (isAdmin() || resource.data.referrerId == request.auth.uid || resource.data.referredId == request.auth.uid);
+        
+        // Creating a referral happens during signup, so no direct write access needed here.
+        allow create, update, delete: if false;
     }
   }
 }
